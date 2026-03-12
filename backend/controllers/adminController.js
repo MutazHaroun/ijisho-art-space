@@ -148,9 +148,11 @@ async function deleteArtwork(req, res) {
 
     res.json({ message: "Artwork deleted successfully" });
   } catch (err) {
-    console.error("deleteArtwork error:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
+  console.error("createArtwork error:", err);
+  console.error(err.stack);
+  res.status(500).json({
+    error: err.message,
+  });
 }
 
 module.exports = { login, createArtwork, updateArtwork, deleteArtwork };
