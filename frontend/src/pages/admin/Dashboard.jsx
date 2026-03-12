@@ -2,10 +2,6 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 
-const API_URL =
-  process.env.REACT_APP_API_URL?.replace("/api", "") ||
-  "https://ijisho-art-space-1.onrender.com";
-
 export default function Dashboard() {
   const navigate = useNavigate();
   const [artworks, setArtworks] = useState([]);
@@ -59,7 +55,6 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
@@ -83,7 +78,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow p-5">
           <p className="text-sm text-gray-500">Total Artworks</p>
@@ -107,7 +101,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Artworks Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
         <div className="px-5 py-4 border-b">
           <h2 className="text-lg font-semibold text-gray-900">Artworks</h2>
@@ -142,7 +135,7 @@ export default function Dashboard() {
                   <td className="px-5 py-3">
                     {a.image_url ? (
                       <img
-                        src={`${API_URL}${a.image_url}`}
+                        src={a.image_url}
                         alt={a.title}
                         className="h-12 w-12 rounded object-cover"
                       />
@@ -203,7 +196,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Messages */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="px-5 py-4 border-b">
           <h2 className="text-lg font-semibold text-gray-900">
