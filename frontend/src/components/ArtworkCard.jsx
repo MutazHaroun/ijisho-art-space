@@ -1,68 +1,101 @@
-import React from "react";
+import React, { useState } from "react"; // أضفنا useState لمراقبة تحميل الصورة
 import { Link } from "react-router-dom";
 
-// 1. يفضل وضع الرابط في ملف إعدادات منفصل، لكن سنبقيه هنا للتبسيط
-// تأكد هل هو 5000 أم 5001 كما ظهر في الصورة؟
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-export default function ArtworkCard({ artwork }) {
-  
-  // 2. بناء رابط الصورة بطريقة آمنة
-  // نتحقق إذا كان المسار يبدأ بـ http (رابط خارجي) أو يحتاج إضافة رابط السيرفر
+export default function ArtworkCard({ artwork, isAdmin, onDelete }) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
   const getFullImageUrl = (path) => {
     if (!path) return "https://placehold.co/400x300?text=No+Image";
-    if (path.startsWith("http")) return path;
+
+    if (typeof path === 'string' && path.includes(":5001")) {
+      const fileName = path.split("/uploads/")[1];
+      return `${API_URL}/uploads/${fileName}`;
+    }
+
+    if (path.startsWith("http") && !path.includes("localhost")) return path;
     
-    // التأكد من عدم وجود // مزدوجة
-    const cleanPath = path.startsWith("/") ? path : `/${path}`;
-    return `${API_URL}${cleanPath}`;
+    let cleanPath = path;
+    if (!path.startsWith("/uploads") && !path.startsWith("uploads")) {
+      cleanPath = `/uploads/${path.replace(/^\//, "")}`;
+    }
+
+    const finalPath = cleanPath.startsWith("/") ? cleanPath : `/${cleanPath}`;
+    return `${API_URL}${finalPath}`;
   };
 
   const imageSrc = getFullImageUrl(artwork.image_url);
 
   return (
-    <Link
-      to={`/gallery/${artwork.id}`}
-      className="group bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300"
-    >
-      <div className="aspect-[4/3] overflow-hidden">
-        <img
-          src={imageSrc}
-          alt={artwork.title}
-          // onerror: إذا فشل تحميل الصورة من السيرفر، تظهر صورة افتراضية
-          onError={(e) => { e.target.src = "https://placehold.co/400x300?text=Error+Loading"; }}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
-      </div>
+    <div className="relative group bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300">
       
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">
-          {artwork.title}
-        </h3>
-        
-        {artwork.artist && (
-          <p className="text-sm text-gray-500 mt-1">by {artwork.artist}</p>
-        )}
+      {/* 1. تأثير الحذف (يظهر فقط للأدمن) */}
+      {isAdmin && (
+        <button
+          onClick={(e) => {
+            e.preventDefault(); // لمنع الانتقال لصفحة التفاصيل عند الضغط على حذف
+            onDelete(artwork.id);
+          }}
+          className="absolute top-2 right-2 z-10 bg-red-500 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg hover:bg-red-600"
+          title="حذف العمل"
+        >
+          🗑️
+        </button>
+      )}
 
-        <div className="mt-2 flex items-center justify-between">
-          <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-            artwork.category === "Art" ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"
-          }`}>
-            {artwork.category}
-          </span>
-          <span className={`text-xs font-medium ${
-            artwork.status === "Available" ? "text-green-600" : "text-red-500"
-          }`}>
-            {artwork.status}
-          </span>
+      <Link to={`/gallery/${artwork.id}`} className="block">
+        {/* 2. حاوية الصورة مع Skeleton Loader */}
+        <div className={`relative aspect-[4/3] overflow-hidden ${!imageLoaded ? 'animate-pulse bg-gray-200' : 'bg-gray-100'}`}>
+          <img
+            src={imageSrc}
+            alt={artwork.title}
+            onLoad={() => setImageLoaded(true)} // تفعيل عند انتهاء التحميل
+            onError={(e) => { 
+              e.target.onerror = null; 
+              e.target.src = "https://placehold.co/400x300?text=Image+Not+Found"; 
+              setImageLoaded(true);
+            }}
+            className={`w-full h-full object-cover transition-all duration-500 ${
+              imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110'
+            } group-hover:scale-110`}
+          />
         </div>
+        
+        <div className="p-4">
+          <div className="flex justify-between items-start gap-2">
+            <h3 className="text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-1">
+              {artwork.title}
+            </h3>
+            {artwork.price && (
+              <span className="text-blue-700 font-extrabold text-md whitespace-nowrap">
+                ${Number(artwork.price).toLocaleString()}
+              </span>
+            )}
+          </div>
+          
+          {artwork.artist && (
+            <p className="text-sm text-gray-500 mt-1 italic">بواسطة {artwork.artist}</p>
+          )}
 
-        {artwork.price && (
-          <p className="mt-2 text-primary-700 font-bold">
-            ${Number(artwork.price).toLocaleString()}
-          </p>
-        )}
-      </div>
-    </Link>
+          <div className="mt-4 flex items-center justify-between">
+            <span className={`text-[10px] uppercase tracking-tighter font-black px-2 py-1 rounded shadow-sm ${
+              artwork.category === "Art" ? "bg-blue-50 text-blue-600 border border-blue-100" : "bg-orange-50 text-orange-600 border border-orange-100"
+            }`}>
+              {artwork.category}
+            </span>
+            
+            <span className={`flex items-center text-xs font-bold ${
+              artwork.status === "Available" ? "text-green-600" : "text-red-500"
+            }`}>
+              <span className={`w-2 h-2 rounded-full mr-1.5 animate-pulse ${
+                artwork.status === "Available" ? "bg-green-500" : "bg-red-500"
+              }`}></span>
+              {artwork.status}
+            </span>
+          </div>
+        </div>
+      </Link>
+    </div>
   );
 }

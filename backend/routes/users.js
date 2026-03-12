@@ -1,7 +1,12 @@
-const express = require("express")
-const UserRouter = express.Router()
-const registerController = require('../controllers/userController')
+const express = require('express');
+const router = express.Router();
+// تأكد أن المسار هنا يشير للملف الذي يحتوي على دالة register و login
+const userController = require('../controllers/adminController'); 
 
-UserRouter.post('/', registerController);
+// مسار التسجيل: سيصبح الرابط http://localhost:5000/api/users/register
+router.post('/register', userController.register);
 
-module.exports = UserRouter
+// مسار الدخول: سيصبح الرابط http://localhost:5000/api/users/login
+router.post('/login', userController.login);
+
+module.exports = router;

@@ -1,9 +1,12 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 
 const auth = require("../middleware/auth");
 const upload = require("../middleware/upload");
+
+// أضفنا register هنا لكي نتمكن من استخدامها
 const {
+  register, 
   login,
   createArtwork,
   updateArtwork,
@@ -12,6 +15,7 @@ const {
   getAdminMessages,
 } = require("../controllers/adminController");
 
+// دالة معالجة رفع الصور
 function handleUpload(req, res, next) {
   upload.single("image")(req, res, function (err) {
     if (err) {
@@ -24,7 +28,15 @@ function handleUpload(req, res, next) {
   });
 }
 
+// --- المسارات العامة (لا تحتاج لتوكن) ---
+
+// مسار التسجيل الجديد
+router.post("/register", register); 
+
+// مسار تسجيل الدخول
 router.post("/login", login);
+
+// --- المسارات المحمية (تحتاج توكن auth) ---
 
 router.get("/artworks", auth, getAdminArtworks);
 router.get("/messages", auth, getAdminMessages);

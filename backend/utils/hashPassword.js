@@ -1,14 +1,10 @@
-const bcrypt = require("bcryptjs")
+const bcrypt = require("bcryptjs");
 
-
- const HashPassowrd = async (password) => {
+async function hashPassword(password) {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     return hashedPassword;
 }
 
-//  const ComparePasswords = async (password, db_password) =>{
-//     const ComparedPassowrd = await bcrypt.compare(password, db_password)
-//     return ComparedPassowrd;
-// }
-module.exports =  HashPassowrd /*ComparePasswords*/;
+// التصدير الصحيح لـ Node.js
+module.exports = hashPassword;
