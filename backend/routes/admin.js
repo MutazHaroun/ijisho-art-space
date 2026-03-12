@@ -8,6 +8,8 @@ const {
   createArtwork,
   updateArtwork,
   deleteArtwork,
+  getAdminArtworks,
+  getAdminMessages,
 } = require("../controllers/adminController");
 
 function handleUpload(req, res, next) {
@@ -23,6 +25,10 @@ function handleUpload(req, res, next) {
 }
 
 router.post("/login", login);
+
+router.get("/artworks", auth, getAdminArtworks);
+router.get("/messages", auth, getAdminMessages);
+
 router.post("/artworks", auth, handleUpload, createArtwork);
 router.put("/artworks/:id", auth, handleUpload, updateArtwork);
 router.delete("/artworks/:id", auth, deleteArtwork);

@@ -45,6 +45,32 @@ async function login(req, res) {
   }
 }
 
+// GET /api/admin/artworks
+async function getAdminArtworks(req, res) {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM artworks ORDER BY created_at DESC"
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("getAdminArtworks error:", err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// GET /api/admin/messages
+async function getAdminMessages(req, res) {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM contact_messages ORDER BY created_at DESC"
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("getAdminMessages error:", err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
 // POST /api/admin/artworks
 async function createArtwork(req, res) {
   try {
@@ -74,7 +100,7 @@ async function createArtwork(req, res) {
     res.status(201).json(rows[0]);
   } catch (err) {
     console.error("createArtwork error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 }
 
@@ -126,7 +152,7 @@ async function updateArtwork(req, res) {
     res.json(rows[0]);
   } catch (err) {
     console.error("updateArtwork error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message });
   }
 }
 
@@ -149,11 +175,15 @@ async function deleteArtwork(req, res) {
     res.json({ message: "Artwork deleted successfully" });
   } catch (err) {
     console.error("deleteArtwork error:", err);
-    console.error(err.stack);
-    res.status(500).json({
-      error: err.message,
-    });
+    res.status(500).json({ error: err.message });
   }
 }
 
-module.exports = { login, createArtwork, updateArtwork, deleteArtwork };
+module.exports = {
+  login,
+  getAdminArtworks,
+  getAdminMessages,
+  createArtwork,
+  updateArtwork,
+  deleteArtwork,
+};
