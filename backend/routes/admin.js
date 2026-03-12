@@ -23,7 +23,6 @@ function handleUpload(req, res, next) {
 }
 
 router.post("/login", login);
-
 router.post("/artworks", auth, handleUpload, createArtwork);
 router.put("/artworks/:id", auth, handleUpload, updateArtwork);
 router.delete("/artworks/:id", auth, deleteArtwork);
