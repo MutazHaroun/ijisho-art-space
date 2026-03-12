@@ -1,12 +1,10 @@
 import axios from "axios";
 
-const API_BASE = process.env.REACT_APP_API_URL || "https://ijisho-art-space-1.onrender.com/api";
-
 const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: "http://localhost:5000/api",
 });
 
-// Attach JWT token to every request if available
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {

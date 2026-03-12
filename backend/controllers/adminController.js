@@ -1,6 +1,8 @@
 const pool = require("../db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
 require("dotenv").config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret";
@@ -80,7 +82,7 @@ async function createArtwork(req, res) {
       return res.status(400).json({ error: "Title is required" });
     }
 
-    const image_url = req.file ? req.file.path : null;
+    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
     const { rows } = await pool.query(
       `INSERT INTO artworks (title, description, image_url, category, status, price, artist)
@@ -123,7 +125,14 @@ async function updateArtwork(req, res) {
     let image_url = current.image_url;
 
     if (req.file) {
-      image_url = req.file.path;
+      if (current.image_url) {
+        const oldPath = path.join(__dirname, "..", current.image_url);
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+        }
+      }
+
+      image_url = `/uploads/${req.file.filename}`;
     }
 
     const { rows } = await pool.query(
@@ -168,6 +177,15 @@ async function deleteArtwork(req, res) {
 
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: "Artwork not found" });
+    }
+
+    const artwork = existing.rows[0];
+
+    if (artwork.image_url) {
+      const filePath = path.join(__dirname, "..", artwork.image_url);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
     }
 
     await pool.query("DELETE FROM artworks WHERE id = $1", [id]);
