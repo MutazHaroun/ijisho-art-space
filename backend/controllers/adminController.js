@@ -51,7 +51,7 @@ async function createArtwork(req, res) {
       return res.status(400).json({ error: "Title is required" });
     }
 
-    const image_url = req.file ? `/uploads/${req.file.filename}` : null;
+    const image_url = req.file ? req.file.path : null;
 
     const { rows } = await pool.query(
       `INSERT INTO artworks (title, description, image_url, category, status, price, artist)
