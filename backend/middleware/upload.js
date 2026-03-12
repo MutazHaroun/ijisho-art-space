@@ -1,33 +1,38 @@
 const multer = require("multer");
 const path = require("path");
-const crypto = require("crypto");
+const fs = require("fs");
+
+const uploadDir = path.join(__dirname, "..", "uploads");
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, path.join(__dirname, "..", "uploads"));
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
   },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = crypto.randomBytes(8).toString("hex");
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${uniqueSuffix}${ext}`);
+  filename: function (req, file, cb) {
+    const uniqueName =
+      Date.now() + "-" + file.originalname.replace(/\s+/g, "-");
+    cb(null, uniqueName);
   },
 });
 
-const fileFilter = (_req, file, cb) => {
-  const allowed = /jpeg|jpg|png|gif|webp/;
-  const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
-  const mimeOk = allowed.test(file.mimetype);
-  if (extOk && mimeOk) {
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
-    cb(new Error("Only image files (jpeg, jpg, png, gif, webp) are allowed"));
+    cb(new Error("Only image files are allowed"), false);
   }
 };
 
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
 });
 
 module.exports = upload;
