@@ -10,11 +10,13 @@ cloudinary.config({
 });
 
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
+  cloudinary,
+  params: async (req, file) => ({
     folder: "ijisho-art-space",
     allowed_formats: ["jpg", "jpeg", "png", "webp"],
-  },
+    resource_type: "image",
+    public_id: `${Date.now()}-${file.originalname.split(".")[0].replace(/\s+/g, "-")}`,
+  }),
 });
 
 const upload = multer({ storage });
