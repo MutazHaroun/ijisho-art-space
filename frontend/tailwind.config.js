@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: "class", // مهم لتفعيل الدارك مود
+
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
+
   theme: {
     extend: {
       colors: {
@@ -16,6 +19,7 @@ module.exports = {
           800: "#923a10",
           900: "#763110",
         },
+
         accent: {
           50: "#f0fdf6",
           100: "#dbfce9",
@@ -31,5 +35,6 @@ module.exports = {
       },
     },
   },
+
   plugins: [require("@tailwindcss/forms")],
 };

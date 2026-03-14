@@ -3,13 +3,19 @@ import { Navigate, Outlet } from "react-router-dom";
 
 const ProtectedRoute = () => {
   const token = localStorage.getItem("token");
+  const userRole = localStorage.getItem("userRole");
 
-  // إذا لم يجد التوكن، يعيده لصفحة الدخول
+  // إذا لم يوجد توكن → رجوع لصفحة دخول الأدمن
   if (!token) {
     return <Navigate to="/admin/login" replace />;
   }
 
-  // إذا وجد التوكن، يفتح له المسارات الداخلية
+  // إذا كان المستخدم ليس أدمن → رجوع للصفحة الرئيسية
+  if (userRole !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+
+  // إذا كان أدمن → يسمح بالدخول
   return <Outlet />;
 };
 

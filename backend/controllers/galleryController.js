@@ -1,45 +1,92 @@
 const pool = require("../db");
-const fs = require("fs").promises; // نحتاج fs للتعامل مع الملفات
+const fs = require("fs").promises;
 const path = require("path");
 
-// 1. جلب كل الأعمال الفنية
+// 1. جلب كل الأعمال الفنية مع البحث والفلترة
 async function getAllArtworks(req, res) {
   try {
-    const { category, status } = req.query;
+    const { search, category, status, page = 1, limit = 6, sort = "newest" } = req.query;
+
     let query = "SELECT * FROM artworks";
+    let countQuery = "SELECT COUNT(*) FROM artworks";
     const conditions = [];
     const values = [];
 
-    if (category) {
+    if (search && search.trim() !== "") {
+      values.push(`%${search.trim()}%`);
+      conditions.push(`title ILIKE $${values.length}`);
+    }
+
+    if (category && category !== "All") {
       values.push(category);
       conditions.push(`category = $${values.length}`);
     }
-    if (status) {
+
+    if (status && status !== "All") {
       values.push(status);
       conditions.push(`status = $${values.length}`);
     }
 
     if (conditions.length > 0) {
-      query += " WHERE " + conditions.join(" AND ");
+      const whereClause = " WHERE " + conditions.join(" AND ");
+      query += whereClause;
+      countQuery += whereClause;
     }
-    query += " ORDER BY created_at DESC";
 
-    const { rows } = await pool.query(query, values);
-    res.json(rows);
+    // Sorting
+    if (sort === "oldest") {
+      query += " ORDER BY created_at ASC";
+    } else if (sort === "price_low") {
+      query += " ORDER BY price ASC NULLS LAST";
+    } else if (sort === "price_high") {
+      query += " ORDER BY price DESC NULLS LAST";
+    } else {
+      query += " ORDER BY created_at DESC";
+    }
+
+    const pageNumber = parseInt(page, 10);
+    const pageSize = parseInt(limit, 10);
+    const offset = (pageNumber - 1) * pageSize;
+
+    values.push(pageSize);
+    values.push(offset);
+
+    query += ` LIMIT $${values.length - 1} OFFSET $${values.length}`;
+
+    const artworksResult = await pool.query(query, values);
+
+    const countValues = values.slice(0, values.length - 2);
+    const countResult = await pool.query(countQuery, countValues);
+
+    const totalItems = parseInt(countResult.rows[0].count, 10);
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+
+    res.json({
+      artworks: artworksResult.rows,
+      currentPage: pageNumber,
+      totalPages,
+      totalItems,
+    });
   } catch (err) {
     console.error("getAllArtworks error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }
 
+
 // 2. جلب عمل فني واحد بواسطة الـ ID
 async function getArtworkById(req, res) {
   try {
     const { id } = req.params;
-    const { rows } = await pool.query("SELECT * FROM artworks WHERE id = $1", [id]);
+    const { rows } = await pool.query(
+      "SELECT * FROM artworks WHERE id = $1",
+      [id]
+    );
+
     if (rows.length === 0) {
       return res.status(404).json({ error: "Artwork not found" });
     }
+
     res.json(rows[0]);
   } catch (err) {
     console.error("getArtworkById error:", err);
@@ -47,7 +94,7 @@ async function getArtworkById(req, res) {
   }
 }
 
-// 3. إضافة عمل فني جديد (POST)
+// 3. إضافة عمل فني جديد
 async function createArtwork(req, res) {
   try {
     const { title, artist, price, category, status, description } = req.body;
@@ -68,17 +115,17 @@ async function createArtwork(req, res) {
       title,
       artist,
       price || 0,
-      category || 'Art',
-      status || 'Available',
+      category || "Art",
+      status || "Available",
       description,
-      imageUrl
+      imageUrl,
     ];
 
     const { rows } = await pool.query(query, values);
 
     res.status(201).json({
       message: "Artwork created successfully!",
-      artwork: rows[0]
+      artwork: rows[0],
     });
   } catch (err) {
     console.error("createArtwork error:", err);
@@ -86,12 +133,11 @@ async function createArtwork(req, res) {
   }
 }
 
-// 4. ميزة الحذف الجديدة: حذف العمل الفني وصورته
+// 4. حذف العمل الفني مع صورته
 async function deleteArtwork(req, res) {
   try {
     const { id } = req.params;
 
-    // أولاً: جلب بيانات العمل للحصول على مسار الصورة قبل الحذف
     const findQuery = "SELECT image_url FROM artworks WHERE id = $1";
     const { rows } = await pool.query(findQuery, [id]);
 
@@ -101,21 +147,19 @@ async function deleteArtwork(req, res) {
 
     const imageUrl = rows[0].image_url;
 
-    // ثانياً: حذف السجل من قاعدة البيانات
     await pool.query("DELETE FROM artworks WHERE id = $1", [id]);
 
-    // ثالثاً: حذف ملف الصورة من السيرفر (Physical Delete)
     if (imageUrl) {
-      // بناء المسار الحقيقي للملف على القرص الصلب
-      // imageUrl تكون عادة "/uploads/filename.jpg"
       const filePath = path.join(__dirname, "..", imageUrl);
-      
+
       try {
         await fs.unlink(filePath);
         console.log(`Successfully deleted file: ${filePath}`);
       } catch (fileErr) {
-        // نكتفي بطباعة الخطأ إذا لم نجد الملف، لنمنع توقف العملية
-        console.error("File deletion error (maybe file already gone):", fileErr);
+        console.error(
+          "File deletion error (maybe file already gone):",
+          fileErr
+        );
       }
     }
 
@@ -126,10 +170,9 @@ async function deleteArtwork(req, res) {
   }
 }
 
-// تصدير الدوال المحدثة
-module.exports = { 
-  getAllArtworks, 
-  getArtworkById, 
+module.exports = {
+  getAllArtworks,
+  getArtworkById,
   createArtwork,
-  deleteArtwork // تصدير الدالة الجديدة
+  deleteArtwork,
 };

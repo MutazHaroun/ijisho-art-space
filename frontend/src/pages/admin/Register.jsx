@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
+import { toast } from "react-toastify";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -25,13 +26,14 @@ export default function Register() {
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match!");
+      toast.error("Passwords do not match!");
       return;
     }
 
     setLoading(true);
 
     try {
-      const { data } = await api.post("/register", {
+      const { data } = await api.post("/admin/register", {
         name: form.name,
         email: form.email,
         password: form.password,
@@ -41,14 +43,19 @@ export default function Register() {
         localStorage.setItem("token", data.token);
       }
 
-      localStorage.setItem("userRole", "user");
-      localStorage.setItem("userName", data.name || form.name);
+      localStorage.setItem("userRole", data.role || "user");
+      localStorage.setItem("userName", data.username || form.name);
+
+      toast.success("Account created successfully");
 
       navigate("/");
+      window.location.reload();
     } catch (err) {
       const serverMessage =
-        err.response?.data?.error || err.response?.data?.message;
-      setError(serverMessage || "Registration failed. Please try again.");
+        err.response?.data?.error || err.response?.data?.message || "Registration failed. Please try again.";
+
+      setError(serverMessage);
+      toast.error(serverMessage);
     } finally {
       setLoading(false);
     }

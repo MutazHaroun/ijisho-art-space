@@ -19,13 +19,26 @@ export default function ContactForm() {
     e.preventDefault();
     setSubmitting(true);
     setStatus(null);
+
     try {
-      // ملاحظة: تأكد من أن المسار في السيرفر هو /contact أو /admin/messages
-      await api.post("/admin/messages", form); 
-      setStatus({ type: "success", text: "Message sent! We'll get back to you soon." });
-      setForm({ name: "", email: "", subject: "", message: "" });
+      await api.post("/contact", form);
+
+      setStatus({
+        type: "success",
+        text: "Message sent! We'll get back to you soon.",
+      });
+
+      setForm({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
     } catch {
-      setStatus({ type: "error", text: "Something went wrong. Please try again." });
+      setStatus({
+        type: "error",
+        text: "Something went wrong. Please try again.",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -34,7 +47,9 @@ export default function ContactForm() {
   return (
     <div className="bg-white p-8 md:p-10 rounded-[2.5rem] shadow-xl border border-gray-100 max-w-2xl mx-auto">
       <h2 className="text-2xl font-black text-gray-900 mb-2">Get in Touch</h2>
-      <p className="text-gray-500 mb-8 text-sm font-medium">We'd love to hear from you. Send us a message below.</p>
+      <p className="text-gray-500 mb-8 text-sm font-medium">
+        We'd love to hear from you. Send us a message below.
+      </p>
 
       {status && (
         <div
@@ -51,9 +66,11 @@ export default function ContactForm() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Name */}
           <div>
-            <label htmlFor="name" className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">
+            <label
+              htmlFor="name"
+              className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1"
+            >
               Full Name *
             </label>
             <input
@@ -68,9 +85,11 @@ export default function ContactForm() {
             />
           </div>
 
-          {/* Email */}
           <div>
-            <label htmlFor="email" className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">
+            <label
+              htmlFor="email"
+              className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1"
+            >
               Email Address *
             </label>
             <input
@@ -86,9 +105,11 @@ export default function ContactForm() {
           </div>
         </div>
 
-        {/* Subject */}
         <div>
-          <label htmlFor="subject" className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">
+          <label
+            htmlFor="subject"
+            className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1"
+          >
             Subject
           </label>
           <input
@@ -102,9 +123,11 @@ export default function ContactForm() {
           />
         </div>
 
-        {/* Message */}
         <div>
-          <label htmlFor="message" className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">
+          <label
+            htmlFor="message"
+            className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2 ml-1"
+          >
             Your Message *
           </label>
           <textarea

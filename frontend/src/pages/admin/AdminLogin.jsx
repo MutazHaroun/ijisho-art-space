@@ -1,12 +1,20 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
+import { toast } from "react-toastify";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ username: "", password: "" });
+  const [form, setForm] = useState({
+    username: "",
+    password: "",
+  });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,25 +23,31 @@ export default function Login() {
 
     try {
       const { data } = await api.post("/admin/login", form);
-      
-      // حفظ التوكن والمعلومات في المتصفح
+
       localStorage.setItem("token", data.token);
-      localStorage.setItem("userRole", data.role); 
+      localStorage.setItem("userRole", data.role);
       localStorage.setItem("userName", data.username);
 
-      // --- منطق التوجيه الذكي (التعديل هنا) ---
+      toast.success("Login successful");
+
       if (data.role === "admin") {
-        // المسؤول فقط يذهب للوحة التحكم
         navigate("/admin/dashboard");
       } else {
-        // المستخدم العادي يذهب للصفحة الرئيسية للمعرض
-        navigate("/"); 
+        navigate("/");
       }
 
+      window.location.reload();
     } catch (err) {
-      setError(
-        err.response?.data?.error || "Invalid login. Please check your credentials."
-      );
+      localStorage.removeItem("token");
+      localStorage.removeItem("userRole");
+      localStorage.removeItem("userName");
+
+      const errorMessage =
+        err.response?.data?.error ||
+        "Login failed. Please check your credentials.";
+
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -42,12 +56,12 @@ export default function Login() {
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 bg-gray-50 py-12">
       <div className="bg-white shadow-2xl rounded-[2.5rem] p-10 w-full max-w-md border border-gray-100">
-        
         <h1 className="text-3xl font-black text-gray-900 text-center mb-2">
-          Welcome Back
+          Login
         </h1>
+
         <p className="text-gray-500 text-center mb-10 font-medium text-sm">
-          Sign in to your Ijisho account
+          Sign in to your account
         </p>
 
         {error && (
@@ -63,10 +77,11 @@ export default function Login() {
             </label>
             <input
               type="text"
+              name="username"
               required
               value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-              placeholder="Enter your username"
+              onChange={handleChange}
+              placeholder="Enter your username or email"
               className="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-transparent focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all duration-300 font-medium"
             />
           </div>
@@ -77,9 +92,10 @@ export default function Login() {
             </label>
             <input
               type="password"
+              name="password"
               required
               value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              onChange={handleChange}
               placeholder="••••••••"
               className="w-full px-6 py-4 rounded-2xl bg-gray-50 border border-transparent focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all duration-300"
             />
@@ -96,9 +112,12 @@ export default function Login() {
 
         <div className="mt-8 text-center border-t border-gray-50 pt-6">
           <p className="text-sm text-gray-500 font-medium">
-            New to the gallery? 
-            <Link to="/register" className="text-orange-600 font-black hover:underline ml-1">
-              Register Now
+            Need an account?
+            <Link
+              to="/register"
+              className="text-orange-600 font-black hover:underline ml-1"
+            >
+              Register here
             </Link>
           </p>
         </div>
@@ -106,3 +125,4 @@ export default function Login() {
     </div>
   );
 }
+

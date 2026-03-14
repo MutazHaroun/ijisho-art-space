@@ -1,21 +1,23 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
 const auth = require("../middleware/auth");
+const adminOnly = require("../middleware/adminOnly");
 const upload = require("../middleware/upload");
 
-// أضفنا register هنا لكي نتمكن من استخدامها
 const {
-  register, 
+  register,
   login,
   createArtwork,
   updateArtwork,
   deleteArtwork,
   getAdminArtworks,
   getAdminMessages,
+  deleteMessage,
+  getAdminProfile,
+  updateAdminProfile,
 } = require("../controllers/adminController");
 
-// دالة معالجة رفع الصور
 function handleUpload(req, res, next) {
   upload.single("image")(req, res, function (err) {
     if (err) {
@@ -28,21 +30,28 @@ function handleUpload(req, res, next) {
   });
 }
 
-// --- المسارات العامة (لا تحتاج لتوكن) ---
+// ---------------- Public Routes ----------------
 
-// مسار التسجيل الجديد
-router.post("/register", register); 
+// تسجيل مستخدم عادي
+router.post("/register", register);
 
-// مسار تسجيل الدخول
+// تسجيل دخول موحد
 router.post("/login", login);
 
-// --- المسارات المحمية (تحتاج توكن auth) ---
+// ---------------- Admin Protected Routes ----------------
 
-router.get("/artworks", auth, getAdminArtworks);
-router.get("/messages", auth, getAdminMessages);
+// الأعمال الفنية
+router.get("/artworks", auth, adminOnly, getAdminArtworks);
+router.post("/artworks", auth, adminOnly, handleUpload, createArtwork);
+router.put("/artworks/:id", auth, adminOnly, handleUpload, updateArtwork);
+router.delete("/artworks/:id", auth, adminOnly, deleteArtwork);
 
-router.post("/artworks", auth, handleUpload, createArtwork);
-router.put("/artworks/:id", auth, handleUpload, updateArtwork);
-router.delete("/artworks/:id", auth, deleteArtwork);
+// الرسائل
+router.get("/messages", auth, adminOnly, getAdminMessages);
+router.delete("/messages/:id", auth, adminOnly, deleteMessage);
+
+// الأدمن بروفايل
+router.get("/profile", auth, adminOnly, getAdminProfile);
+router.put("/profile", auth, adminOnly, updateAdminProfile);
 
 module.exports = router;
