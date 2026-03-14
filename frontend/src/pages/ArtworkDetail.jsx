@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api/axios";
+import { toast } from "react-toastify";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -10,6 +11,7 @@ export default function ArtworkDetail() {
   const [artwork, setArtwork] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -19,7 +21,43 @@ export default function ArtworkDetail() {
       .then((res) => setArtwork(res.data))
       .catch((err) => console.error("Failed to fetch artwork:", err))
       .finally(() => setLoading(false));
+
+    const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+    setIsFavorite(favorites.includes(id));
   }, [id]);
+
+  const toggleFavorite = () => {
+    const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
+
+    let updated;
+
+    if (favorites.includes(id)) {
+      updated = favorites.filter((item) => item !== id);
+      toast.info("Removed from favorites");
+      setIsFavorite(false);
+    } else {
+      updated = [...favorites, id];
+      toast.success("Added to favorites");
+      setIsFavorite(true);
+    }
+
+    localStorage.setItem("favorites", JSON.stringify(updated));
+  };
+
+  const shareArtwork = async () => {
+    const shareData = {
+      title: artwork.title,
+      text: "Check out this artwork",
+      url: window.location.href,
+    };
+
+    try {
+      await navigator.share(shareData);
+    } catch {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copied to clipboard");
+    }
+  };
 
   const getFullImageUrl = (path) => {
     if (!path) return "https://placehold.co/800x600?text=No+Image";
@@ -33,9 +71,6 @@ export default function ArtworkDetail() {
         <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-8 animate-pulse">
           <div className="h-[400px] bg-gray-200 dark:bg-gray-800 rounded-2xl mb-6"></div>
           <div className="h-8 w-1/2 bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
-          <div className="h-4 w-1/3 bg-gray-100 dark:bg-gray-700 rounded mb-3"></div>
-          <div className="h-4 w-full bg-gray-100 dark:bg-gray-700 rounded mb-2"></div>
-          <div className="h-4 w-5/6 bg-gray-100 dark:bg-gray-700 rounded"></div>
         </div>
       </div>
     );
@@ -60,11 +95,12 @@ export default function ArtworkDetail() {
     <>
       <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+          
+          {/* Image */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-4">
             <button
               onClick={() => setFullscreen(true)}
               className="w-full group"
-              title="Open full image"
             >
               <img
                 src={imageUrl}
@@ -81,7 +117,9 @@ export default function ArtworkDetail() {
             </button>
           </div>
 
+          {/* Details */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-8">
+
             <span className="inline-block px-4 py-1 rounded-full bg-orange-50 text-orange-600 text-sm font-bold mb-4">
               Artwork Details
             </span>
@@ -92,46 +130,62 @@ export default function ArtworkDetail() {
 
             <div className="space-y-3 text-gray-600 dark:text-gray-300 mb-6">
               {artwork.artist && (
-                <p>
-                  <span className="font-bold">Artist:</span> {artwork.artist}
-                </p>
+                <p><b>Artist:</b> {artwork.artist}</p>
               )}
 
               {artwork.category && (
-                <p>
-                  <span className="font-bold">Category:</span> {artwork.category}
-                </p>
+                <p><b>Category:</b> {artwork.category}</p>
               )}
 
               {artwork.status && (
-                <p>
-                  <span className="font-bold">Status:</span> {artwork.status}
-                </p>
+                <p><b>Status:</b> {artwork.status}</p>
               )}
 
               {artwork.price && (
-                <p>
-                  <span className="font-bold">Price:</span> $
-                  {Number(artwork.price).toLocaleString()}
-                </p>
+                <p><b>Price:</b> ${Number(artwork.price).toLocaleString()}</p>
               )}
 
               {artwork.created_at && (
                 <p>
-                  <span className="font-bold">Added:</span>{" "}
+                  <b>Added:</b>{" "}
                   {new Date(artwork.created_at).toLocaleDateString()}
                 </p>
               )}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-wrap gap-3 mb-6">
+
+              <button
+                onClick={toggleFavorite}
+                className={`px-5 py-3 rounded-2xl font-bold transition-all ${
+                  isFavorite
+                    ? "bg-red-500 text-white"
+                    : "bg-gray-100 dark:bg-gray-800 dark:text-white"
+                }`}
+              >
+                {isFavorite ? "❤ Favorited" : "♡ Add to Favorites"}
+              </button>
+
+              <button
+                onClick={shareArtwork}
+                className="px-5 py-3 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all"
+              >
+                Share
+              </button>
+
             </div>
 
             <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
               <h2 className="text-xl font-black text-[#0b1120] dark:text-white mb-3">
                 Description
               </h2>
+
               <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
                 {artwork.description || "No description available for this artwork."}
               </p>
             </div>
+
           </div>
         </div>
       </div>
