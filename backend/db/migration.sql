@@ -5,10 +5,20 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Categories ENUM
-CREATE TYPE artwork_category AS ENUM ('Art', 'Heritage');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'artwork_category') THEN
+    CREATE TYPE artwork_category AS ENUM ('Art', 'Heritage');
+  END IF;
+END$$;
 
 -- Status ENUM
-CREATE TYPE artwork_status AS ENUM ('Available', 'Sold');
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'artwork_status') THEN
+    CREATE TYPE artwork_status AS ENUM ('Available', 'Sold');
+  END IF;
+END$$;
 
 -- Artworks table
 CREATE TABLE IF NOT EXISTS artworks (
@@ -42,9 +52,19 @@ CREATE TABLE IF NOT EXISTS admin_users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Regular users table (for frontend/user auth)
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    names VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'user',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Index for faster category/status filtering
-CREATE INDEX idx_artworks_category ON artworks(category);
-CREATE INDEX idx_artworks_status ON artworks(status);
+CREATE INDEX IF NOT EXISTS idx_artworks_category ON artworks(category);
+CREATE INDEX IF NOT EXISTS idx_artworks_status ON artworks(status);
 
 -- Trigger to auto-update updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -55,7 +75,16 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_artworks_updated_at
-    BEFORE UPDATE ON artworks
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_trigger
+    WHERE tgname = 'update_artworks_updated_at'
+  ) THEN
+    CREATE TRIGGER update_artworks_updated_at
+      BEFORE UPDATE ON artworks
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END$$;

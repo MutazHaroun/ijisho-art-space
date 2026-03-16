@@ -24,6 +24,7 @@ export default function Login() {
     try {
       const { data } = await api.post("/admin/login", form);
 
+      // Store token and user info for API auth and UI state
       localStorage.setItem("token", data.token);
       localStorage.setItem("userRole", data.role);
       localStorage.setItem("userName", data.username);
@@ -35,11 +36,8 @@ export default function Login() {
       } else {
         navigate("/");
       }
-
-      window.location.reload();
     } catch (err) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("userRole");
+localStorage.removeItem("userRole");
       localStorage.removeItem("userName");
 
       const errorMessage =

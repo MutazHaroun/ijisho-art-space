@@ -17,6 +17,7 @@ import ContactPage from "./pages/ContactPage";
 import AdminLogin from "./pages/admin/AdminLogin";
 import Register from "./pages/admin/Register";
 import AboutPage from "./pages/AboutPage";
+import Cart from "./pages/Cart";
 
 // Admin Pages
 import Dashboard from "./pages/admin/Dashboard";
@@ -38,6 +39,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/favorites" element={<FavoritesPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/cart" element={<Cart />} />
 
           {/* Admin Protected Routes */}
           <Route element={<ProtectedRoute />}>

@@ -37,12 +37,6 @@ export default function ArtworkForm() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/admin/login");
-      return;
-    }
-
     if (isEdit) {
       setLoading(true);
       api
@@ -64,7 +58,7 @@ export default function ArtworkForm() {
         .catch(() => setError("Failed to load artwork details"))
         .finally(() => setLoading(false));
     }
-  }, [id, isEdit, navigate]);
+  }, [id, isEdit]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });

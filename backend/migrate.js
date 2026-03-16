@@ -4,16 +4,17 @@ const path = require("path");
 require("dotenv").config();
 
 async function runMigration() {
-  const connectionString =
-    process.env.DATABASE_URL ||
-    null;
+  const connectionString = process.env.DATABASE_URL || null;
+  const useSsl = process.env.DB_SSL === "true";
 
   const client = connectionString
     ? new Client({
         connectionString,
-        ssl: {
-          rejectUnauthorized: false,
-        },
+        ssl: useSsl
+          ? {
+              rejectUnauthorized: false,
+            }
+          : false,
       })
     : new Client({
         host: process.env.DB_HOST,
@@ -21,9 +22,11 @@ async function runMigration() {
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
         database: process.env.DB_NAME,
-        ssl: {
-          rejectUnauthorized: false,
-        },
+        ssl: useSsl
+          ? {
+              rejectUnauthorized: false,
+            }
+          : false,
       });
 
   try {

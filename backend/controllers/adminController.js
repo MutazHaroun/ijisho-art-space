@@ -33,7 +33,7 @@ async function register(req, res) {
 
     const { rows } = await pool.query(
       `INSERT INTO users (id, names, email, password, role)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4)
+       VALUES (uuid_generate_v4(), $1, $2, $3, $4)
        RETURNING id, names, email, role`,
       [name, email, hashedPassword, "user"]
     );
@@ -45,6 +45,13 @@ async function register(req, res) {
       JWT_SECRET,
       { expiresIn: "8h" }
     );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 8 * 60 * 60 * 1000, // 8 hours
+    });
 
     return res.status(201).json({
       message: "Registration successful!",
@@ -105,6 +112,14 @@ async function login(req, res) {
       JWT_SECRET,
       { expiresIn: "8h" }
     );
+
+    // Set token as secure httpOnly cookie (best for browsers)
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 8 * 60 * 60 * 1000, // 8 hours
+    });
 
     return res.json({
       message: "Login successful",
@@ -373,9 +388,22 @@ async function updateAdminProfile(req, res) {
   }
 }
 
+/**
+ * 11) Logout (clear the cookie)
+ */
+function logout(req, res) {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+  return res.json({ message: "Logged out successfully" });
+}
+
 module.exports = {
   register,
   login,
+  logout,
   getAdminArtworks,
   getAdminMessages,
   createArtwork,

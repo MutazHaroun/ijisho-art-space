@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { FaShoppingCart } from "react-icons/fa";
+import api from "../api/axios";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [logoClicks, setLogoClicks] = useState(0);
+  const [cartCount, setCartCount] = useState(0);
   const [darkMode, setDarkMode] = useState(
     localStorage.getItem("darkMode") === "true"
   );
@@ -13,10 +16,9 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const token = localStorage.getItem("token");
   const userRole = localStorage.getItem("userRole");
-  const isLoggedIn = !!token;
-  const isAdmin = isLoggedIn && userRole === "admin";
+  const isLoggedIn = !!userRole;
+  const isAdmin = userRole === "admin";
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -49,7 +51,30 @@ export default function Navbar() {
     }
   }, []);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    const updateCartCount = () => {
+      const cart = JSON.parse(localStorage.getItem("cart")) || [];
+      setCartCount(cart.length);
+    };
+
+    updateCartCount();
+
+    window.addEventListener("storage", updateCartCount);
+    window.addEventListener("cartUpdated", updateCartCount);
+
+    return () => {
+      window.removeEventListener("storage", updateCartCount);
+      window.removeEventListener("cartUpdated", updateCartCount);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await api.post("/admin/logout");
+    } catch (err) {
+      // ignore, as we still want to log the user out client-side
+    }
+
     localStorage.removeItem("token");
     localStorage.removeItem("adminUser");
     localStorage.removeItem("userRole");
@@ -126,6 +151,24 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            {/* Cart */}
+            <Link
+              to="/cart"
+              className={`relative flex items-center gap-2 text-sm font-black uppercase tracking-widest transition-all duration-300 hover:text-orange-600 ${
+                isActive("/cart")
+                  ? "text-orange-600"
+                  : "text-gray-500 dark:text-gray-300"
+              }`}
+            >
+              <FaShoppingCart className="text-base" />
+              Cart
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-4 min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-black">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
 
             <button
               onClick={toggleDarkMode}
@@ -229,6 +272,21 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
+
+          {/* Mobile Cart */}
+          <Link
+            to="/cart"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 text-2xl font-black text-[#0b1120] dark:text-white"
+          >
+            <FaShoppingCart />
+            Cart
+            {cartCount > 0 && (
+              <span className="min-w-[28px] h-7 px-2 flex items-center justify-center rounded-full bg-red-500 text-white text-sm font-black">
+                {cartCount}
+              </span>
+            )}
+          </Link>
 
           <button
             onClick={toggleDarkMode}

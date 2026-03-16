@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const rateLimit = require("express-rate-limit");
 
 const auth = require("../middleware/auth");
 const adminOnly = require("../middleware/adminOnly");
@@ -8,6 +9,7 @@ const upload = require("../middleware/upload");
 const {
   register,
   login,
+  logout,
   createArtwork,
   updateArtwork,
   deleteArtwork,
@@ -17,6 +19,14 @@ const {
   getAdminProfile,
   updateAdminProfile,
 } = require("../controllers/adminController");
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: { error: "Too many requests, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 function handleUpload(req, res, next) {
   upload.single("image")(req, res, function (err) {
@@ -33,10 +43,10 @@ function handleUpload(req, res, next) {
 // ---------------- Public Routes ----------------
 
 // تسجيل مستخدم عادي
-router.post("/register", register);
+router.post("/register", authLimiter, register);
 
 // تسجيل دخول موحد
-router.post("/login", login);
+router.post("/login", authLimiter, login);
 
 // ---------------- Admin Protected Routes ----------------
 
@@ -53,5 +63,8 @@ router.delete("/messages/:id", auth, adminOnly, deleteMessage);
 // الأدمن بروفايل
 router.get("/profile", auth, adminOnly, getAdminProfile);
 router.put("/profile", auth, adminOnly, updateAdminProfile);
+
+// Logout
+router.post("/logout", auth, logout);
 
 module.exports = router;

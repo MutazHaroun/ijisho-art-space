@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api/axios";
 import { toast } from "react-toastify";
+import { FaWhatsapp, FaInstagram } from "react-icons/fa";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -12,6 +13,7 @@ export default function ArtworkDetail() {
   const [loading, setLoading] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [inCart, setInCart] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -24,6 +26,9 @@ export default function ArtworkDetail() {
 
     const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
     setIsFavorite(favorites.includes(id));
+
+    const cart = JSON.parse(localStorage.getItem("cart")) || [];
+    setInCart(cart.includes(id));
   }, [id]);
 
   const toggleFavorite = () => {
@@ -42,6 +47,25 @@ export default function ArtworkDetail() {
     }
 
     localStorage.setItem("favorites", JSON.stringify(updated));
+  };
+
+  const toggleCart = () => {
+    const cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+    let updated;
+
+    if (cart.includes(id)) {
+      updated = cart.filter((item) => item !== id);
+      toast.info("Removed from cart");
+      setInCart(false);
+    } else {
+      updated = [...cart, id];
+      toast.success("Added to cart");
+      setInCart(true);
+    }
+
+    localStorage.setItem("cart", JSON.stringify(updated));
+    window.dispatchEvent(new Event("cartUpdated"));
   };
 
   const shareArtwork = async () => {
@@ -64,6 +88,13 @@ export default function ArtworkDetail() {
     if (path.startsWith("http")) return path;
     return `${API_URL}${path.startsWith("/") ? path : `/${path}`}`;
   };
+
+  const whatsappMessage = encodeURIComponent(
+    `Hello, I am interested in this artwork: ${artwork?.title || "Artwork"}`
+  );
+
+  const whatsappUrl = `https://wa.me/250789781166?text=${whatsappMessage}`;
+  const instagramUrl = "https://www.instagram.com/ijisho_artspace/";
 
   if (loading) {
     return (
@@ -95,13 +126,9 @@ export default function ArtworkDetail() {
     <>
       <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-          
           {/* Image */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-4">
-            <button
-              onClick={() => setFullscreen(true)}
-              className="w-full group"
-            >
+            <button onClick={() => setFullscreen(true)} className="w-full group">
               <img
                 src={imageUrl}
                 alt={artwork.title}
@@ -119,7 +146,6 @@ export default function ArtworkDetail() {
 
           {/* Details */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-8">
-
             <span className="inline-block px-4 py-1 rounded-full bg-orange-50 text-orange-600 text-sm font-bold mb-4">
               Artwork Details
             </span>
@@ -130,19 +156,27 @@ export default function ArtworkDetail() {
 
             <div className="space-y-3 text-gray-600 dark:text-gray-300 mb-6">
               {artwork.artist && (
-                <p><b>Artist:</b> {artwork.artist}</p>
+                <p>
+                  <b>Artist:</b> {artwork.artist}
+                </p>
               )}
 
               {artwork.category && (
-                <p><b>Category:</b> {artwork.category}</p>
+                <p>
+                  <b>Category:</b> {artwork.category}
+                </p>
               )}
 
               {artwork.status && (
-                <p><b>Status:</b> {artwork.status}</p>
+                <p>
+                  <b>Status:</b> {artwork.status}
+                </p>
               )}
 
               {artwork.price && (
-                <p><b>Price:</b> ${Number(artwork.price).toLocaleString()}</p>
+                <p>
+                  <b>Price:</b> ${Number(artwork.price).toLocaleString()}
+                </p>
               )}
 
               {artwork.created_at && (
@@ -153,9 +187,8 @@ export default function ArtworkDetail() {
               )}
             </div>
 
-            {/* Buttons */}
-            <div className="flex flex-wrap gap-3 mb-6">
-
+            {/* Main Buttons */}
+            <div className="flex flex-wrap gap-3 mb-4">
               <button
                 onClick={toggleFavorite}
                 className={`px-5 py-3 rounded-2xl font-bold transition-all ${
@@ -168,12 +201,45 @@ export default function ArtworkDetail() {
               </button>
 
               <button
+                onClick={toggleCart}
+                className={`px-5 py-3 rounded-2xl font-bold transition-all ${
+                  inCart
+                    ? "bg-green-600 text-white"
+                    : "bg-gray-100 dark:bg-gray-800 dark:text-white"
+                }`}
+              >
+                {inCart ? "🛒 In Cart" : "🛒 Add to Cart"}
+              </button>
+
+              <button
                 onClick={shareArtwork}
                 className="px-5 py-3 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all"
               >
                 Share
               </button>
+            </div>
 
+            {/* Social Contact Buttons */}
+            <div className="flex flex-wrap gap-3 mb-6">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-green-500 text-white font-bold hover:bg-green-600 transition-all"
+              >
+                <FaWhatsapp className="text-xl" />
+                WhatsApp
+              </a>
+
+              <a
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-pink-500 text-white font-bold hover:bg-pink-600 transition-all"
+              >
+                <FaInstagram className="text-xl" />
+                Instagram
+              </a>
             </div>
 
             <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
@@ -185,7 +251,6 @@ export default function ArtworkDetail() {
                 {artwork.description || "No description available for this artwork."}
               </p>
             </div>
-
           </div>
         </div>
       </div>
@@ -209,4 +274,3 @@ export default function ArtworkDetail() {
     </>
   );
 }
-

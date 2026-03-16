@@ -1,21 +1,31 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
+import api from "../api/axios";
 
 const ProtectedRoute = () => {
-  const token = localStorage.getItem("token");
-  const userRole = localStorage.getItem("userRole");
+  const [status, setStatus] = useState({ loading: true, allowed: false });
 
-  // إذا لم يوجد توكن → رجوع لصفحة دخول الأدمن
-  if (!token) {
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await api.get("/admin/profile");
+        setStatus({ loading: false, allowed: res.data?.role === "admin" });
+      } catch {
+        setStatus({ loading: false, allowed: false });
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  if (status.loading) {
+    return null; // or a spinner
+  }
+
+  if (!status.allowed) {
     return <Navigate to="/admin/login" replace />;
   }
 
-  // إذا كان المستخدم ليس أدمن → رجوع للصفحة الرئيسية
-  if (userRole !== "admin") {
-    return <Navigate to="/" replace />;
-  }
-
-  // إذا كان أدمن → يسمح بالدخول
   return <Outlet />;
 };
 

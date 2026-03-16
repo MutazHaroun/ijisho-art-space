@@ -75,12 +75,12 @@ export default function Footer() {
 
             <div className="space-y-4 text-sm font-medium">
               <div className="flex items-center gap-2">
-                <span>📍</span>
-                <p>Kigali, Rwanda</p>
+                <span></span>
+                <p>Rubavu, Rwanda</p>
               </div>
 
               <div className="flex items-center gap-2">
-                <span>✉️</span>
+                <span></span>
                 <a
                   href="mailto:info@ijishoartspace.com"
                   className="hover:text-orange-500 transition-colors"
@@ -90,7 +90,7 @@ export default function Footer() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span>🕒</span>
+                <span></span>
                 <p>Mon - Sat: 9:00 AM - 6:00 PM</p>
               </div>
             </div>

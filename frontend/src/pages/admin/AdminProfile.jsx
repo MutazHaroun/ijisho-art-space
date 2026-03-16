@@ -14,14 +14,6 @@ export default function AdminProfile() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const userRole = localStorage.getItem("userRole");
-
-    if (!token || userRole !== "admin") {
-      navigate("/admin/login");
-      return;
-    }
-
     api
       .get("/admin/profile")
       .then((res) => {
@@ -34,7 +26,6 @@ export default function AdminProfile() {
         console.error("Profile fetch error:", err);
 
         if (err.response?.status === 401 || err.response?.status === 403) {
-          localStorage.removeItem("token");
           localStorage.removeItem("userRole");
           localStorage.removeItem("userName");
           navigate("/admin/login");
