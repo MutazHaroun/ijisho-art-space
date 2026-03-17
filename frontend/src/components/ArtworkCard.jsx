@@ -28,6 +28,9 @@ export default function ArtworkCard({ artwork, isAdmin, onDelete }) {
   };
 
   const imageSrc = getFullImageUrl(artwork.image_url);
+  const averageRating = Number(artwork.average_rating || 0);
+  const reviewsCount = Number(artwork.reviews_count || 0);
+  const roundedRating = Math.round(averageRating);
 
   return (
     <>
@@ -54,7 +57,9 @@ export default function ArtworkCard({ artwork, isAdmin, onDelete }) {
 
         <div
           className={`relative aspect-[4/3] overflow-hidden ${
-            !imageLoaded ? "animate-pulse bg-gray-200 dark:bg-gray-800" : "bg-gray-100 dark:bg-gray-800"
+            !imageLoaded
+              ? "animate-pulse bg-gray-200 dark:bg-gray-800"
+              : "bg-gray-100 dark:bg-gray-800"
           }`}
         >
           <img
@@ -105,6 +110,22 @@ export default function ArtworkCard({ artwork, isAdmin, onDelete }) {
                 BY {artwork.artist}
               </p>
             )}
+
+            {/* Rating */}
+            <div className="mt-3 flex items-center gap-2">
+              <div className="flex items-center text-orange-400 text-sm">
+                {"★".repeat(roundedRating)}
+                {"☆".repeat(5 - roundedRating)}
+              </div>
+
+              <span className="text-sm font-bold text-[#0b1120] dark:text-white">
+                {averageRating.toFixed(1)}
+              </span>
+
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                ({reviewsCount} review{reviewsCount === 1 ? "" : "s"})
+              </span>
+            </div>
 
             {artwork.description && (
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-3 line-clamp-2 leading-relaxed">
@@ -171,6 +192,19 @@ export default function ArtworkCard({ artwork, isAdmin, onDelete }) {
                 <h2 className="text-3xl font-black text-[#0b1120] dark:text-white mb-3">
                   {artwork.title}
                 </h2>
+
+                <div className="mb-4 flex items-center gap-2">
+                  <div className="flex items-center text-orange-400 text-base">
+                    {"★".repeat(roundedRating)}
+                    {"☆".repeat(5 - roundedRating)}
+                  </div>
+                  <span className="font-bold text-[#0b1120] dark:text-white">
+                    {averageRating.toFixed(1)}
+                  </span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    ({reviewsCount} review{reviewsCount === 1 ? "" : "s"})
+                  </span>
+                </div>
 
                 {artwork.artist && (
                   <p className="text-gray-500 dark:text-gray-300 mb-2">

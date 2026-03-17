@@ -6,6 +6,9 @@ require("dotenv").config();
 const galleryRoutes = require("./routes/gallery");
 const adminRoutes = require("./routes/admin");
 const contactRoutes = require("./routes/contact");
+const ordersRoutes = require("./routes/orders");
+const artworkReviewsRoutes = require("./routes/artworkReviews");
+const orderReviewsRoutes = require("./routes/orderReviews");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,24 +37,24 @@ app.use(
     credentials: true,
   })
 );
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // --------------- Routes ---------------
 
-// 1. مسارات المعرض والاتصال
+// Public routes
 app.use("/api/gallery", galleryRoutes);
 app.use("/api/contact", contactRoutes);
+app.use("/api/order-reviews", orderReviewsRoutes);
 
-// 2. مسارات الإدارة والدخول (التعديل هنا)
-// قمنا بتغيير البادئة لـ /api/admin لتطابق طلبات الـ React
-// الآن ستعمل الروابط التالية:
-// /api/admin/login
-// /api/admin/register
-// /api/admin/artworks
-// /api/admin/messages
-app.use("/api/admin", adminRoutes); 
+// Orders routes
+app.use("/api/orders", ordersRoutes);
+
+// Admin routes
+app.use("/api/admin", adminRoutes);
+app.use("/api/artwork-reviews", artworkReviewsRoutes);
 
 // --------------- Health check ---------------
 app.get("/api/health", (_req, res) => {
@@ -61,6 +64,7 @@ app.get("/api/health", (_req, res) => {
 // --------------- Start ---------------
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log("✅ Orders route loaded at /api/orders");
 });
 
 module.exports = app;

@@ -1,16 +1,22 @@
-# Backend Error Fixes - COMPLETE ✅
+# Backend Fix Progress
 
-## Summary of Changes
-1. **[DONE]** No uuid install needed (using PostgreSQL gen_random_uuid())
-2. **[DONE]** server.js: Commented out require('./routes/users') to fix Route.post() undefined crash (duplicate routes)
-3. **[DONE]** controllers/adminController.js: Updated register() INSERT to `id = gen_random_uuid()` explicitly, fixed UUID parse error for name input
-4. **[DONE]** Skipped routes/users.js (duplicate/unloaded)
-5. **[DONE]** Server restart command ready (run manually: `cd ../ART2/backend && npm run dev`)
+✅ Created `routes/orderReviews.js` - fixes MODULE_NOT_FOUND error
 
-## Verification
-- Route crash prevented (no users.js load)
-- UUID error fixed (gen_random_uuid() generates proper UUID for id)
-- Registration now works at /api/register
-- Email duplicate check in place
-
-Project stable. Test in browser/Postman at http://localhost:5000/api/register with POST JSON {"name":"Test", "email":"test@test.com", "password":"123"}.
+## Next Steps:
+1. cd ../ART2/backend && npm run dev  (server should start now)
+2. If DB error on `order_reviews` table:
+   - Run DB migration to add table:
+     ```
+     -- Add to migration.sql or run in pgAdmin/psql:
+     CREATE TABLE IF NOT EXISTS order_reviews (
+       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+       order_id UUID REFERENCES orders(id),
+       customer_name VARCHAR(255),
+       customer_phone VARCHAR(50),
+       rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+       comment TEXT,
+       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+     );
+     ```
+3. Test endpoint: POST http://localhost:5000/api/order-reviews {order_id: '...', rating: 5}
+4. Seed some test data if needed via seed.js

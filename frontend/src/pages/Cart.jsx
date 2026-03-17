@@ -9,6 +9,9 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 export default function Cart() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
 
   const getFullImageUrl = (path) => {
     if (!path) return "https://placehold.co/800x600?text=No+Image";
@@ -53,6 +56,13 @@ export default function Cart() {
     toast.info("Removed from cart");
   };
 
+  const clearCart = () => {
+    localStorage.removeItem("cart");
+    setItems([]);
+    window.dispatchEvent(new Event("cartUpdated"));
+    toast.info("Cart cleared");
+  };
+
   const totalPrice = items.reduce(
     (sum, item) => sum + Number(item.price || 0),
     0
@@ -60,21 +70,78 @@ export default function Cart() {
 
   const whatsappMessage = encodeURIComponent(
     items.length > 0
-      ? `Hello, I am interested in these artworks:\n\n${items
-          .map(
-            (item, index) =>
-              `${index + 1}. ${item.title} - $${Number(item.price || 0).toLocaleString()}`
-          )
-          .join("\n")}\n\nTotal: $${totalPrice.toLocaleString()}`
+      ? `Hello, my name is ${customerName || "Guest Customer"}.
+My phone number is ${customerPhone || "Not provided"}.
+
+I am interested in these artworks:
+
+${items
+  .map(
+    (item, index) =>
+      `${index + 1}. ${item.title} - $${Number(item.price || 0).toLocaleString()}`
+  )
+  .join("\n")}
+
+Total: $${totalPrice.toLocaleString()}`
       : "Hello, I am interested in artworks from Ijisho Art Space."
   );
 
   const whatsappUrl = `https://wa.me/250789781166?text=${whatsappMessage}`;
 
+  const handleWhatsAppOrder = async () => {
+    if (items.length === 0) {
+      toast.info("Your cart is empty");
+      return;
+    }
+
+    if (!customerName.trim()) {
+      toast.error("Please enter your name");
+      return;
+    }
+
+    if (!customerPhone.trim()) {
+      toast.error("Please enter your phone number");
+      return;
+    }
+
+    try {
+      setSubmittingOrder(true);
+
+      await api.post("/orders", {
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        items: items.map((item) => ({
+          id: item.id,
+          title: item.title,
+          price: Number(item.price || 0),
+          category: item.category || "Uncategorized",
+        })),
+        total_price: totalPrice,
+      });
+
+      toast.success("Order saved successfully");
+
+      localStorage.removeItem("cart");
+      setItems([]);
+      setCustomerName("");
+      setCustomerPhone("");
+      window.dispatchEvent(new Event("cartUpdated"));
+
+      window.open(whatsappUrl, "_blank");
+    } catch (error) {
+      console.error("Failed to save order:", error);
+      toast.error("Failed to save order");
+    } finally {
+      setSubmittingOrder(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto py-16 px-4">
-        <h1 className="text-4xl font-black mb-8 text-[#0b1120]">Shopping Cart</h1>
+        <h1 className="text-4xl font-black mb-8 text-[#0b1120]">
+          Shopping Cart
+        </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[...Array(4)].map((_, index) => (
@@ -198,15 +265,42 @@ export default function Cart() {
 
             <div className="border-t border-gray-100 my-6"></div>
 
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-green-500 text-white font-bold hover:bg-green-600 transition-all"
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-bold text-[#0b1120] mb-2">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Enter your full name"
+                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-[#0b1120] mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="Enter your phone number"
+                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleWhatsAppOrder}
+              disabled={submittingOrder}
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-green-500 text-white font-bold hover:bg-green-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <FaWhatsapp className="text-lg" />
-              Contact on WhatsApp
-            </a>
+              {submittingOrder ? "Saving Order..." : "Contact on WhatsApp"}
+            </button>
 
             <Link
               to="/gallery"
@@ -214,9 +308,17 @@ export default function Cart() {
             >
               Continue Shopping
             </Link>
+
+            <button
+              onClick={clearCart}
+              className="mt-3 w-full inline-flex items-center justify-center px-5 py-3 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 transition-all"
+            >
+              Clear Cart
+            </button>
           </div>
         </div>
       </div>
     </div>
   );
 }
+

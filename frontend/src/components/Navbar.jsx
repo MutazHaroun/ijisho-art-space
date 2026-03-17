@@ -7,8 +7,8 @@ import api from "../api/axios";
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [logoClicks, setLogoClicks] = useState(0);
   const [cartCount, setCartCount] = useState(0);
+  const [cartTotal, setCartTotal] = useState(0);
   const [darkMode, setDarkMode] = useState(
     localStorage.getItem("darkMode") === "true"
   );
@@ -44,17 +44,37 @@ export default function Navbar() {
     const alreadyCounted = sessionStorage.getItem("visitorCounted");
 
     if (!alreadyCounted) {
-      const currentVisitors =
-        Number(localStorage.getItem("siteVisitors")) || 0;
+      const currentVisitors = Number(localStorage.getItem("siteVisitors")) || 0;
       localStorage.setItem("siteVisitors", currentVisitors + 1);
       sessionStorage.setItem("visitorCounted", "true");
     }
   }, []);
 
   useEffect(() => {
-    const updateCartCount = () => {
+    const updateCartCount = async () => {
       const cart = JSON.parse(localStorage.getItem("cart")) || [];
       setCartCount(cart.length);
+
+      if (cart.length === 0) {
+        setCartTotal(0);
+        return;
+      }
+
+      try {
+        const responses = await Promise.all(
+          cart.map((id) => api.get(`/gallery/${id}`))
+        );
+
+        const total = responses.reduce(
+          (sum, res) => sum + Number(res.data.price || 0),
+          0
+        );
+
+        setCartTotal(total);
+      } catch (error) {
+        console.error("Failed to calculate cart total:", error);
+        setCartTotal(0);
+      }
     };
 
     updateCartCount();
@@ -72,7 +92,7 @@ export default function Navbar() {
     try {
       await api.post("/admin/logout");
     } catch (err) {
-      // ignore, as we still want to log the user out client-side
+      // ignore
     }
 
     localStorage.removeItem("token");
@@ -82,22 +102,6 @@ export default function Navbar() {
     setOpen(false);
     toast.info("Logged out successfully");
     navigate("/");
-  };
-
-  const handleLogoSecretClick = (e) => {
-    e.preventDefault();
-
-    const nextCount = logoClicks + 1;
-    setLogoClicks(nextCount);
-
-    if (nextCount >= 2) {
-      setLogoClicks(0);
-      navigate("/admin/login");
-    }
-
-    setTimeout(() => {
-      setLogoClicks(0);
-    }, 1000);
   };
 
   const toggleDarkMode = () => {
@@ -124,18 +128,17 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
         <div className="flex justify-between items-center">
-          <Link
-            to="/"
-            onClick={handleLogoSecretClick}
-            className="group flex items-center gap-2"
-          >
-            <div className="w-10 h-10 bg-[#0b1120] dark:bg-white rounded-xl flex items-center justify-center text-white dark:text-[#0b1120] font-black text-xl group-hover:bg-orange-600 transition-colors duration-300">
-              I
-            </div>
-            <span className="text-xl font-black text-[#0b1120] dark:text-white tracking-tighter">
-              Ijisho <span className="text-orange-600">Art</span> Space
-            </span>
-          </Link>
+       <Link to="/" className="group flex items-center gap-3">
+  <img
+    src="/favicon.ico"
+    alt="Ijisho Art Space Logo"
+    className="w-10 h-10 rounded-xl object-contain transition-transform group-hover:scale-110"
+  />
+
+  <span className="text-xl font-extrabold tracking-tight text-[#0b1120] dark:text-white">
+    Ijisho <span className="text-orange-600">Art</span> Space
+  </span>
+</Link>
 
           <div className="hidden md:flex items-center gap-8">
             {links.map((link) => (
@@ -152,7 +155,6 @@ export default function Navbar() {
               </Link>
             ))}
 
-            {/* Cart */}
             <Link
               to="/cart"
               className={`relative flex items-center gap-2 text-sm font-black uppercase tracking-widest transition-all duration-300 hover:text-orange-600 ${
@@ -162,11 +164,16 @@ export default function Navbar() {
               }`}
             >
               <FaShoppingCart className="text-base" />
-              Cart
+
               {cartCount > 0 && (
-                <span className="absolute -top-2 -right-4 min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-black">
-                  {cartCount}
-                </span>
+                <>
+                  <span className="text-xs font-bold normal-case">
+                    (${cartTotal.toLocaleString()})
+                  </span>
+                  <span className="absolute -top-2 -right-4 min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-black">
+                    {cartCount}
+                  </span>
+                </>
               )}
             </Link>
 
@@ -189,6 +196,17 @@ export default function Navbar() {
                     }`}
                   >
                     Dashboard
+                  </Link>
+
+                  <Link
+                    to="/admin/orders"
+                    className={`text-sm font-black uppercase tracking-widest hover:text-orange-600 transition-colors ${
+                      isActive("/admin/orders")
+                        ? "text-orange-600"
+                        : "text-gray-900 dark:text-white"
+                    }`}
+                  >
+                    Orders
                   </Link>
 
                   <Link
@@ -217,12 +235,21 @@ export default function Navbar() {
                   Logout
                 </button>
               ) : (
-                <Link
-                  to="/register"
-                  className="bg-[#0b1120] text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-gray-200 active:scale-95"
-                >
-                  Register
-                </Link>
+                <div className="flex items-center gap-3">
+                  <Link
+                    to="/admin/login"
+                    className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                  >
+                    Login
+                  </Link>
+
+                  <Link
+                    to="/register"
+                    className="bg-[#0b1120] text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-gray-200 active:scale-95"
+                  >
+                    Register
+                  </Link>
+                </div>
               )}
             </div>
           </div>
@@ -273,7 +300,6 @@ export default function Navbar() {
             </Link>
           ))}
 
-          {/* Mobile Cart */}
           <Link
             to="/cart"
             onClick={() => setOpen(false)}
@@ -282,9 +308,14 @@ export default function Navbar() {
             <FaShoppingCart />
             Cart
             {cartCount > 0 && (
-              <span className="min-w-[28px] h-7 px-2 flex items-center justify-center rounded-full bg-red-500 text-white text-sm font-black">
-                {cartCount}
-              </span>
+              <>
+                <span className="text-base font-bold">
+                  (${cartTotal.toLocaleString()})
+                </span>
+                <span className="min-w-[28px] h-7 px-2 flex items-center justify-center rounded-full bg-red-500 text-white text-sm font-black">
+                  {cartCount}
+                </span>
+              </>
             )}
           </Link>
 
@@ -305,6 +336,14 @@ export default function Navbar() {
                 className="text-xl font-black text-blue-600"
               >
                 Dashboard
+              </Link>
+
+              <Link
+                to="/admin/orders"
+                onClick={() => setOpen(false)}
+                className="text-xl font-black text-orange-600"
+              >
+                Orders
               </Link>
 
               <Link
@@ -332,7 +371,15 @@ export default function Navbar() {
               </button>
             </div>
           ) : (
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
+              <Link
+                to="/admin/login"
+                onClick={() => setOpen(false)}
+                className="border border-gray-300 dark:border-gray-600 text-[#0b1120] dark:text-white py-4 rounded-2xl text-center text-lg font-black uppercase tracking-widest"
+              >
+                Login
+              </Link>
+
               <Link
                 to="/register"
                 onClick={() => setOpen(false)}

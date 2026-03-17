@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import FavoritesPage from "./pages/FavoritesPage";
 import MessagesPage from "./pages/admin/MessagesPage";
 import AdminProfile from "./pages/admin/AdminProfile";
+import AdminOrders from "./pages/admin/AdminOrders";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -47,6 +48,7 @@ function App() {
             <Route path="/admin/artworks/new" element={<ArtworkForm />} />
             <Route path="/admin/artworks/:id/edit" element={<ArtworkForm />} />
             <Route path="/admin/messages" element={<MessagesPage />} />
+            <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
           </Route>
 

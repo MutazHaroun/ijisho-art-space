@@ -2,46 +2,70 @@ const pool = require("../db");
 const fs = require("fs").promises;
 const path = require("path");
 
-// 1. جلب كل الأعمال الفنية مع البحث والفلترة
+// 1. جلب كل الأعمال الفنية مع البحث والفلترة + التقييم
 async function getAllArtworks(req, res) {
   try {
-    const { search, category, status, page = 1, limit = 6, sort = "newest" } = req.query;
+    const {
+      search,
+      category,
+      status,
+      page = 1,
+      limit = 6,
+      sort = "newest",
+    } = req.query;
 
-    let query = "SELECT * FROM artworks";
+    let query = `
+      SELECT
+        artworks.*,
+        COALESCE(review_stats.reviews_count, 0) AS reviews_count,
+        COALESCE(review_stats.average_rating, 0) AS average_rating
+      FROM artworks
+      LEFT JOIN (
+        SELECT
+          artwork_id,
+          COUNT(*)::int AS reviews_count,
+          COALESCE(ROUND(AVG(rating)::numeric, 1), 0) AS average_rating
+        FROM artwork_reviews
+        GROUP BY artwork_id
+      ) AS review_stats
+      ON review_stats.artwork_id = artworks.id
+    `;
+
     let countQuery = "SELECT COUNT(*) FROM artworks";
+
     const conditions = [];
     const values = [];
 
     if (search && search.trim() !== "") {
       values.push(`%${search.trim()}%`);
-      conditions.push(`title ILIKE $${values.length}`);
+      conditions.push(`artworks.title ILIKE $${values.length}`);
     }
 
     if (category && category !== "All") {
       values.push(category);
-      conditions.push(`category = $${values.length}`);
+      conditions.push(`artworks.category = $${values.length}`);
     }
 
     if (status && status !== "All") {
       values.push(status);
-      conditions.push(`status = $${values.length}`);
+      conditions.push(`artworks.status = $${values.length}`);
     }
 
     if (conditions.length > 0) {
       const whereClause = " WHERE " + conditions.join(" AND ");
       query += whereClause;
-      countQuery += whereClause;
+      countQuery += whereClause.replaceAll("artworks.", "");
     }
 
     // Sorting
     if (sort === "oldest") {
-      query += " ORDER BY created_at ASC";
+      query += " ORDER BY artworks.created_at ASC";
     } else if (sort === "price_low") {
-      query += " ORDER BY price ASC NULLS LAST";
+      query += " ORDER BY artworks.price ASC NULLS LAST";
     } else if (sort === "price_high") {
-      query += " ORDER BY price DESC NULLS LAST";
+      query += " ORDER BY artworks.price DESC NULLS LAST";
     } else {
-      query += " ORDER BY created_at DESC";
+      query += " ORDER BY artworks.created_at DESC";
     }
 
     const pageNumber = parseInt(page, 10);
@@ -73,13 +97,29 @@ async function getAllArtworks(req, res) {
   }
 }
 
-
-// 2. جلب عمل فني واحد بواسطة الـ ID
+// 2. جلب عمل فني واحد بواسطة الـ ID + التقييم
 async function getArtworkById(req, res) {
   try {
     const { id } = req.params;
+
     const { rows } = await pool.query(
-      "SELECT * FROM artworks WHERE id = $1",
+      `
+      SELECT
+        artworks.*,
+        COALESCE(review_stats.reviews_count, 0) AS reviews_count,
+        COALESCE(review_stats.average_rating, 0) AS average_rating
+      FROM artworks
+      LEFT JOIN (
+        SELECT
+          artwork_id,
+          COUNT(*)::int AS reviews_count,
+          COALESCE(ROUND(AVG(rating)::numeric, 1), 0) AS average_rating
+        FROM artwork_reviews
+        GROUP BY artwork_id
+      ) AS review_stats
+      ON review_stats.artwork_id = artworks.id
+      WHERE artworks.id = $1
+      `,
       [id]
     );
 
