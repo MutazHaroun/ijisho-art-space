@@ -100,7 +100,7 @@ export default function ArtworkCard({ artwork, isAdmin, onDelete }) {
 
               {artwork.price && (
                 <span className="text-blue-700 dark:text-blue-400 font-extrabold text-sm whitespace-nowrap">
-                  ${Number(artwork.price).toLocaleString()}
+                  RWF{Number(artwork.price).toLocaleString()}
                 </span>
               )}
             </div>
@@ -226,7 +226,7 @@ export default function ArtworkCard({ artwork, isAdmin, onDelete }) {
 
                 {artwork.price && (
                   <p className="text-blue-700 dark:text-blue-400 font-extrabold text-lg mb-4">
-                    ${Number(artwork.price).toLocaleString()}
+                    RWF{Number(artwork.price).toLocaleString()}
                   </p>
                 )}
 

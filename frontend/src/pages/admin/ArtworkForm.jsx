@@ -153,7 +153,7 @@ export default function ArtworkForm() {
 
               {/* Price */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Price ($)</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Price (RWF)</label>
                 <input
                   type="number"
                   name="price"

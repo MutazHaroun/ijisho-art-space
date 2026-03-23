@@ -209,7 +209,7 @@ if (createdOrder?.id) {
                   )}
 
                   <p className="text-lg font-bold text-orange-600">
-                    ${Number(item.price || 0).toLocaleString()}
+                    RWF{Number(item.price || 0).toLocaleString()}
                   </p>
                 </div>
 
@@ -250,7 +250,7 @@ if (createdOrder?.id) {
               <div className="flex justify-between">
                 <span>Total Price</span>
                 <span className="font-bold text-[#0b1120]">
-                  ${totalPrice.toLocaleString()}
+                  RWF{totalPrice.toLocaleString()}
                 </span>
               </div>
             </div>

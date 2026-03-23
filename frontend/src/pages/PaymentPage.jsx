@@ -114,7 +114,7 @@ export default function PaymentPage() {
             <div className="flex justify-between">
               <span className="text-gray-500">Total</span>
               <span className="font-black text-green-600">
-                ${Number(order.total_price || 0).toLocaleString()}
+                RWF{Number(order.total_price || 0).toLocaleString()}
               </span>
             </div>
           </div>
@@ -125,7 +125,7 @@ export default function PaymentPage() {
             {order.items?.map((item) => (
               <div key={item.id} className="flex justify-between">
                 <span>{item.title}</span>
-                <span className="font-bold">${Number(item.price || 0)}</span>
+                <span className="font-bold">RWF{Number(item.price || 0)}</span>
               </div>
             ))}
           </div>

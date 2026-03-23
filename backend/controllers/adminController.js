@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const path = require("path");
+const { v4: uuidv4 } = require("uuid");
 require("dotenv").config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret";
@@ -16,58 +17,55 @@ async function register(req, res) {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ error: "All fields are required" });
+      return res.status(400).json({
+        error: "All fields are required",
+      });
     }
 
-    const existingUser = await pool.query(
-      "SELECT id FROM users WHERE email = $1",
+    const existing = await pool.query(
+      "SELECT * FROM users WHERE email = $1",
       [email]
     );
 
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({ error: "Email already registered" });
+    if (existing.rows.length > 0) {
+      return res.status(400).json({
+        error: "Email already exists",
+      });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const userId = uuidv4();
 
     const { rows } = await pool.query(
-      `INSERT INTO users (id, names, email, password, role)
-       VALUES (uuid_generate_v4(), $1, $2, $3, $4)
-       RETURNING id, names, email, role`,
-      [name, email, hashedPassword, "user"]
+      `
+      INSERT INTO users (id, name, email, password, role)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id, name, email, role
+      `,
+      [userId, name, email, hashedPassword, "user"]
     );
 
     const user = rows[0];
 
     const token = jwt.sign(
-      { id: user.id, username: user.names, role: user.role },
-      JWT_SECRET,
+      { id: user.id, username: user.name, role: user.role },
+      process.env.JWT_SECRET,
       { expiresIn: "8h" }
     );
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 8 * 60 * 60 * 1000, // 8 hours
-    });
-
     return res.status(201).json({
-      message: "Registration successful!",
+      message: "Account created successfully",
       token,
-      username: user.names,
+      id: user.id,
+      username: user.name,
       email: user.email,
       role: user.role,
     });
   } catch (err) {
-    console.error("❌ REGISTER ERROR:", err.message);
-
-    if (err.code === "23505") {
-      return res.status(400).json({ error: "Email already registered" });
-    }
-
-    return res.status(500).json({ error: "Database Error: " + err.message });
+    console.error("❌ REGISTER ERROR:", err);
+    return res.status(500).json({
+      error: "Internal server error",
+    });
   }
 }
 

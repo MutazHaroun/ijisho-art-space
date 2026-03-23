@@ -90,6 +90,11 @@ export default function Dashboard() {
     return new Date(dateValue).toLocaleDateString();
   };
 
+  const formatCurrency = (amount) => {
+    const value = Number(amount) || 0;
+    return `RWF ${value.toLocaleString()}`;
+  };
+
   const getFullImageUrl = (path) => {
     if (!path) return "https://placehold.co/100x100?text=No+Image";
 
@@ -471,7 +476,7 @@ export default function Dashboard() {
             </span>
           </div>
           <h2 className="text-4xl font-black text-purple-600">
-            {stats.totalSales.toLocaleString()}
+            {formatCurrency(stats.totalSales)}
           </h2>
           <p className="text-sm text-gray-400 mt-2">
             Sum of all order totals
@@ -792,7 +797,7 @@ export default function Dashboard() {
                 Total Estimated Value
               </p>
               <h2 className="text-4xl font-black text-blue-600">
-                ${stats.totalValue.toLocaleString()}
+                {formatCurrency(stats.totalValue)}
               </h2>
             </div>
 
@@ -817,7 +822,7 @@ export default function Dashboard() {
                 Total Order Revenue
               </p>
               <h2 className="text-4xl font-black text-green-600">
-                RWF {stats.totalSales.toLocaleString()}
+                {formatCurrency(stats.totalSales)}
               </h2>
             </div>
 
@@ -879,7 +884,7 @@ export default function Dashboard() {
                   <div className="text-right shrink-0 flex items-center gap-3">
                     <div>
                       <p className="font-bold text-blue-600">
-                        ${Number(item.price || 0).toLocaleString()}
+                        {formatCurrency(item.price)}
                       </p>
                       <Link
                         to={`/admin/artworks/${item.id}/edit`}
@@ -991,7 +996,7 @@ export default function Dashboard() {
                       {order.customer_phone || "-"}
                     </td>
                     <td className="py-4 pr-4 font-bold text-green-600">
-                      RWF {Number(order.total_price || 0).toLocaleString()}
+                      {formatCurrency(order.total_price)}
                     </td>
                     <td className="py-4 pr-4">
                       <span
@@ -1024,4 +1029,3 @@ export default function Dashboard() {
     </div>
   );
 }
-

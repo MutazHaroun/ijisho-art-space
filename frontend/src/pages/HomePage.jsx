@@ -19,10 +19,13 @@ export default function HomePage() {
   }, []);
 
   const stats = [
-    { label: "Art", value: "Paintings & Creative Works" },
-    { label: "Heritage", value: "Cultural Objects" },
-    { label: "Featured", value: loading ? "..." : featured.length },
-  ];
+  { label: "Art", value: "Paintings & Creative Works" },
+  { label: "Heritage", value: "Cultural Objects" },
+  {
+    label: "Featured",
+    value: loading ? "Loading..." : `${featured.length} Artworks`,
+  },
+];
 
   const highlights = [
     "Discover authentic Rwandan artworks",
@@ -161,7 +164,7 @@ export default function HomePage() {
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {featured.slice(0, 4).map((artwork) => (
+              {featured.slice(0, 25).map((artwork) => (
                 <ArtworkCard key={artwork.id} artwork={artwork} />
               ))}
             </div>
