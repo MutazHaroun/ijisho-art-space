@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import { FaTrash, FaWhatsapp } from "react-icons/fa";
+import { FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function Cart() {
+  const navigate = useNavigate();
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submittingOrder, setSubmittingOrder] = useState(false);
@@ -68,34 +70,14 @@ export default function Cart() {
     0
   );
 
-  const whatsappMessage = encodeURIComponent(
-    items.length > 0
-      ? `Hello, my name is ${customerName || "Guest Customer"}.
-My phone number is ${customerPhone || "Not provided"}.
-
-I am interested in these artworks:
-
-${items
-  .map(
-    (item, index) =>
-      `${index + 1}. ${item.title} - $${Number(item.price || 0).toLocaleString()}`
-  )
-  .join("\n")}
-
-Total: $${totalPrice.toLocaleString()}`
-      : "Hello, I am interested in artworks from Ijisho Art Space."
-  );
-
-  const whatsappUrl = `https://wa.me/250789781166?text=${whatsappMessage}`;
-
-  const handleWhatsAppOrder = async () => {
+  const handlePlaceOrder = async () => {
     if (items.length === 0) {
       toast.info("Your cart is empty");
       return;
     }
 
     if (!customerName.trim()) {
-      toast.error("Please enter your name");
+      toast.error("Please enter your full name");
       return;
     }
 
@@ -107,30 +89,40 @@ Total: $${totalPrice.toLocaleString()}`
     try {
       setSubmittingOrder(true);
 
-      await api.post("/orders", {
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        items: items.map((item) => ({
-          id: item.id,
-          title: item.title,
-          price: Number(item.price || 0),
-          category: item.category || "Uncategorized",
-        })),
-        total_price: totalPrice,
-      });
+      const { data } = await api.post("/orders", {
+  customer_name: customerName,
+  customer_phone: customerPhone,
+  items: items.map((item) => ({
+    id: item.id,
+    title: item.title,
+    price: Number(item.price || 0),
+    category: item.category || "Uncategorized",
+  })),
+  total_price: totalPrice,
+  payment_method: "momo", // أو خليها ثابتة أو أضف اختيار لاحقاً
+  payment_phone: customerPhone,
+  user_id: localStorage.getItem("userId"),
+});
 
-      toast.success("Order saved successfully");
+const createdOrder = data.order;
 
-      localStorage.removeItem("cart");
-      setItems([]);
-      setCustomerName("");
-      setCustomerPhone("");
-      window.dispatchEvent(new Event("cartUpdated"));
+toast.success("Order placed successfully");
 
-      window.open(whatsappUrl, "_blank");
+localStorage.removeItem("cart");
+setItems([]);
+setCustomerName("");
+setCustomerPhone("");
+window.dispatchEvent(new Event("cartUpdated"));
+
+// 🔥 هنا الحل الحقيقي
+if (createdOrder?.id) {
+  navigate(`/payment/${createdOrder.id}`);
+} else {
+  toast.error("Order created but no ID returned");
+}
     } catch (error) {
-      console.error("Failed to save order:", error);
-      toast.error("Failed to save order");
+      console.error("Failed to place order:", error);
+      toast.error(error.response?.data?.error || "Failed to place order");
     } finally {
       setSubmittingOrder(false);
     }
@@ -183,7 +175,7 @@ Total: $${totalPrice.toLocaleString()}`
   return (
     <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
       <div className="flex flex-col lg:flex-row gap-10 items-start">
-        {/* Left: Cart Items */}
+
         <div className="w-full lg:w-2/3">
           <span className="inline-block px-4 py-1 rounded-full bg-orange-50 text-orange-600 text-sm font-bold mb-4">
             Your Selection
@@ -242,7 +234,7 @@ Total: $${totalPrice.toLocaleString()}`
           </div>
         </div>
 
-        {/* Right: Summary */}
+
         <div className="w-full lg:w-1/3">
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 sticky top-28">
             <h2 className="text-2xl font-black text-[#0b1120] mb-6">
@@ -294,12 +286,11 @@ Total: $${totalPrice.toLocaleString()}`
             </div>
 
             <button
-              onClick={handleWhatsAppOrder}
+              onClick={handlePlaceOrder}
               disabled={submittingOrder}
-              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-green-500 text-white font-bold hover:bg-green-600 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full inline-flex items-center justify-center px-5 py-3 rounded-2xl bg-green-600 text-white font-bold hover:bg-green-700 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <FaWhatsapp className="text-lg" />
-              {submittingOrder ? "Saving Order..." : "Contact on WhatsApp"}
+              {submittingOrder ? "Placing Order..." : "Place Order"}
             </button>
 
             <Link

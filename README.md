@@ -1,38 +1,41 @@
 # Ijisho Art Space
 
-A full-stack digital gallery platform for showcasing and managing Rwandan paintings and heritage artworks.
+## Description
 
-## Tech Stack
+Ijisho Art Space is a digital platform for showcasing Rwandan art and heritage.
 
-Frontend
-- React
-- Tailwind CSS
+## Technologies
 
-Backend
-- Node.js
-- Express.js
+* Frontend: React + Tailwind CSS
+* Backend: Node.js + Express
+* Database: PostgreSQL
 
-Database
-- PostgreSQL
+## Installation
+
+### Backend
+
+cd backend
+npm install
+npm run dev
+
+### Frontend
+
+cd frontend
+npm install
+npm start
+
+### Database
+
+Run migration.sql using PostgreSQL
 
 ## Features
 
-- Admin dashboard
-- Add / edit artworks
-- Gallery display
-- Contact form
-- Image upload system
+* Admin dashboard
+* Artwork management
+* Image upload
+* Authentication (JWT)
+* Gallery filtering
 
-## Project Structure
+## Author
 
-backend/
-  controllers/
-  routes/
-  middleware/
-  db/
-
-frontend/
-  components/
-  pages/
-
-  
+Mutaz Haroun

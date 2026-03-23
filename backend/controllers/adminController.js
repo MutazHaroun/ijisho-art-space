@@ -76,20 +76,26 @@ async function register(req, res) {
  * تسجيل دخول موحد لأي مستخدم
  * والواجهة تقرر الوجهة حسب role
  */
+
 async function login(req, res) {
   try {
-    const { username, password } = req.body;
+    console.log("LOGIN BODY:", req.body);
 
-    if (!username || !password) {
+    const { email, username, password } = req.body;
+    const loginValue = email || username;
+
+    if (!loginValue || !password) {
       return res.status(400).json({
-        error: "Username and password are required",
+        error: "Email/username and password are required",
       });
     }
 
     const { rows } = await pool.query(
-      "SELECT * FROM users WHERE email = $1 OR names = $1",
-      [username]
+      "SELECT * FROM users WHERE email = $1 OR name = $1",
+      [loginValue]
     );
+
+    console.log("LOGIN USER ROWS:", rows);
 
     if (rows.length === 0) {
       return res.status(401).json({
@@ -108,31 +114,35 @@ async function login(req, res) {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.names, role: user.role },
+      { id: user.id, username: user.name, role: user.role },
       JWT_SECRET,
       { expiresIn: "8h" }
     );
 
-    // Set token as secure httpOnly cookie (best for browsers)
+    
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 8 * 60 * 60 * 1000, // 8 hours
+      maxAge: 8 * 60 * 60 * 1000,
     });
 
     return res.json({
-      message: "Login successful",
-      token,
-      username: user.names,
-      email: user.email,
-      role: user.role,
-    });
+  message: "Login successful",
+  token,
+  id: user.id,
+  username: user.name,
+  email: user.email,
+  role: user.role,
+});
   } catch (err) {
-    console.error("❌ LOGIN ERROR:", err.message);
+    console.error("❌ LOGIN ERROR FULL:", err);
+    console.error("❌ LOGIN ERROR MESSAGE:", err.message);
+    console.error("❌ LOGIN ERROR STACK:", err.stack);
     return res.status(500).json({ error: "Internal server error" });
   }
 }
+
 
 /**
  * 3) Get all artworks for admin dashboard
@@ -326,7 +336,7 @@ async function getAdminProfile(req, res) {
     const adminId = req.user.id;
 
     const { rows } = await pool.query(
-      `SELECT id, names, email, role
+      `SELECT id, name, email, role
        FROM users
        WHERE id = $1`,
       [adminId]
@@ -371,11 +381,11 @@ async function updateAdminProfile(req, res) {
 
     const { rows } = await pool.query(
       `UPDATE users
-       SET names = $1,
+       SET name = $1,
            password = $2
        WHERE id = $3
-       RETURNING id, names, email, role`,
-      [name || current.names, updatedPassword, adminId]
+       RETURNING id, name, email, role`,
+      [name || current.name, updatedPassword, adminId]
     );
 
     return res.json({
@@ -400,6 +410,50 @@ function logout(req, res) {
   return res.json({ message: "Logged out successfully" });
 }
 
+/**
+ * 12) Get all reviews (ADMIN)
+ */
+async function getAllReviews(req, res) {
+  try {
+    const { rows } = await pool.query(`
+      SELECT 
+        r.id,
+        r.artwork_id,
+        r.customer_name,
+        r.customer_phone,
+        r.rating,
+        r.comment,
+        r.created_at,
+        a.title AS artwork_title
+      FROM artwork_reviews r
+      LEFT JOIN artworks a 
+      ON r.artwork_id::text = a.id::text
+      ORDER BY r.created_at DESC
+    `);
+
+    return res.json(rows);
+  } catch (err) {
+    console.error("🔥 REAL ERROR:", err); // مهم
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * 13) Delete review (ADMIN)
+ */
+async function deleteReview(req, res) {
+  try {
+    const { id } = req.params;
+
+    await pool.query("DELETE FROM artwork_reviews WHERE id = $1", [id]);
+
+    return res.json({ message: "Review deleted successfully" });
+  } catch (err) {
+    console.error("❌ DELETE REVIEW ERROR:", err.message);
+    return res.status(500).json({ error: "Failed to delete review" });
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -412,5 +466,7 @@ module.exports = {
   deleteMessage,
   getAdminProfile,
   updateAdminProfile,
+  getAllReviews,
+  deleteReview,
 };
 

@@ -25,14 +25,13 @@ async function getAllArtworks(req, res) {
           artwork_id,
           COUNT(*)::int AS reviews_count,
           COALESCE(ROUND(AVG(rating)::numeric, 1), 0) AS average_rating
-        FROM artwork_reviews
+        FROM reviews
         GROUP BY artwork_id
       ) AS review_stats
-      ON review_stats.artwork_id = artworks.id
+      ON review_stats.artwork_id::text = artworks.id::text
     `;
 
     let countQuery = "SELECT COUNT(*) FROM artworks";
-
     const conditions = [];
     const values = [];
 
@@ -57,7 +56,7 @@ async function getAllArtworks(req, res) {
       countQuery += whereClause.replaceAll("artworks.", "");
     }
 
-    // Sorting
+    // Sorting Logic
     if (sort === "oldest") {
       query += " ORDER BY artworks.created_at ASC";
     } else if (sort === "price_low") {
@@ -78,7 +77,6 @@ async function getAllArtworks(req, res) {
     query += ` LIMIT $${values.length - 1} OFFSET $${values.length}`;
 
     const artworksResult = await pool.query(query, values);
-
     const countValues = values.slice(0, values.length - 2);
     const countResult = await pool.query(countQuery, countValues);
 
@@ -97,12 +95,13 @@ async function getAllArtworks(req, res) {
   }
 }
 
-// 2. جلب عمل فني واحد بواسطة الـ ID + التقييم
+// 2. جلب عمل فني واحد مع التقييمات وقائمة المراجعات
 async function getArtworkById(req, res) {
   try {
     const { id } = req.params;
 
-    const { rows } = await pool.query(
+    // جلب بيانات العمل والمتوسط
+    const artworkResult = await pool.query(
       `
       SELECT
         artworks.*,
@@ -114,27 +113,64 @@ async function getArtworkById(req, res) {
           artwork_id,
           COUNT(*)::int AS reviews_count,
           COALESCE(ROUND(AVG(rating)::numeric, 1), 0) AS average_rating
-        FROM artwork_reviews
+        FROM reviews
         GROUP BY artwork_id
       ) AS review_stats
       ON review_stats.artwork_id = artworks.id
-      WHERE artworks.id = $1
+      WHERE artworks.id::text = $1
       `,
       [id]
     );
 
-    if (rows.length === 0) {
+    if (artworkResult.rows.length === 0) {
       return res.status(404).json({ error: "Artwork not found" });
     }
 
-    res.json(rows[0]);
+    // جلب قائمة المراجعات الفعلية (التعليقات) لهذا العمل
+    const reviewsResult = await pool.query(
+      "SELECT * FROM reviews WHERE artwork_id = $1 ORDER BY created_at DESC",
+      [id]
+    );
+
+    const artwork = artworkResult.rows[0];
+    artwork.reviews = reviewsResult.rows; // ندمج التعليقات في كائن العمل الفني
+
+    res.json(artwork);
   } catch (err) {
     console.error("getArtworkById error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 }
 
-// 3. إضافة عمل فني جديد
+// 3. إضافة مراجعة جديدة (NEW)
+async function addReview(req, res) {
+  try {
+    const { id } = req.params; // Artwork UUID
+    const { rating, comment, customer_name } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: "Rating must be between 1 and 5" });
+    }
+
+    const query = `
+      INSERT INTO reviews (artwork_id, rating, comment, customer_name)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
+    `;
+
+    const { rows } = await pool.query(query, [id, rating, comment, customer_name || 'Guest']);
+
+    res.status(201).json({
+      message: "Review added successfully!",
+      review: rows[0],
+    });
+  } catch (err) {
+    console.error("addReview error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// 4. إضافة عمل فني جديد
 async function createArtwork(req, res) {
   try {
     const { title, artist, price, category, status, description } = req.body;
@@ -173,7 +209,7 @@ async function createArtwork(req, res) {
   }
 }
 
-// 4. حذف العمل الفني مع صورته
+// 5. حذف العمل الفني مع صورته
 async function deleteArtwork(req, res) {
   try {
     const { id } = req.params;
@@ -191,15 +227,10 @@ async function deleteArtwork(req, res) {
 
     if (imageUrl) {
       const filePath = path.join(__dirname, "..", imageUrl);
-
       try {
         await fs.unlink(filePath);
-        console.log(`Successfully deleted file: ${filePath}`);
       } catch (fileErr) {
-        console.error(
-          "File deletion error (maybe file already gone):",
-          fileErr
-        );
+        console.error("File deletion error:", fileErr);
       }
     }
 
@@ -210,9 +241,34 @@ async function deleteArtwork(req, res) {
   }
 }
 
+// حذف مراجعة معينة (للأدمن فقط)
+async function deleteReview(req, res) {
+  try {
+    const { reviewId } = req.params;
+
+    // التأكد من وجود المراجعة قبل الحذف
+    const findReview = await pool.query("SELECT * FROM reviews WHERE id = $1", [reviewId]);
+    
+    if (findReview.rows.length === 0) {
+      return res.status(404).json({ error: "Review not found" });
+    }
+
+    await pool.query("DELETE FROM reviews WHERE id = $1", [reviewId]);
+
+    res.json({ message: "Review deleted successfully" });
+  } catch (err) {
+    console.error("deleteReview error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+// لا تنسَ إضافة deleteReview إلى module.exports في أسفل الملف
+
 module.exports = {
   getAllArtworks,
   getArtworkById,
   createArtwork,
   deleteArtwork,
+  addReview, // لا تنسَ تصدير الدالة الجديدة
+  deleteReview,
 };

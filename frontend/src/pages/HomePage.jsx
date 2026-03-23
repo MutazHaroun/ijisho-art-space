@@ -31,8 +31,8 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="bg-white">
-      {/* HERO */}
+    <div className="bg-white dark:bg-gray-950 transition-colors duration-300">
+      {/* HERO SECTION */}
       <AboutSection
         eyebrow="WELCOME TO IJISHO ART SPACE"
         title="Discover Rwandan Art in a Modern Digital Space"
@@ -42,36 +42,38 @@ export default function HomePage() {
           "Visitors can explore creativity, identity, and tradition through one modern gallery experience.",
         ]}
       >
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
           {stats.map((s) => (
             <div
               key={s.label}
-              className="bg-white border border-gray-200 p-4 rounded-xl"
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 rounded-xl transition-all hover:shadow-md"
             >
-              <p className="text-xs text-gray-500 font-bold">{s.label}</p>
-              <p className="font-black text-[#0b1120]">{s.value}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">{s.label}</p>
+              <p className="font-black text-[#0b1120] dark:text-white mt-1">{s.value}</p>
             </div>
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 mt-6">
+        {/* Hero CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-8">
           <Link
             to="/gallery"
-            className="px-6 py-3 bg-[#0b1120] text-white font-bold rounded-xl"
+            className="px-8 py-4 bg-[#0b1120] dark:bg-orange-600 text-white font-bold rounded-xl text-center transition-transform active:scale-95 shadow-lg shadow-gray-200 dark:shadow-none"
           >
             Explore Gallery
           </Link>
 
           <Link
             to="/about"
-            className="px-6 py-3 bg-orange-600 text-white font-bold rounded-xl"
+            className="px-8 py-4 bg-orange-600 dark:bg-gray-800 text-white font-bold rounded-xl text-center transition-transform active:scale-95"
           >
             Learn More
           </Link>
         </div>
       </AboutSection>
 
-      {/* INTRO */}
+      {/* INTRO SECTION */}
       <AboutSection
         eyebrow="OUR STORY"
         title="A Platform for Art, Heritage, and Identity"
@@ -83,7 +85,7 @@ export default function HomePage() {
         ]}
       />
 
-      {/* HIGHLIGHTS */}
+      {/* HIGHLIGHTS SECTION */}
       <AboutSection
         eyebrow="WHY VISIT"
         title="More Than a Gallery Website"
@@ -92,17 +94,17 @@ export default function HomePage() {
           "The platform is designed to make the gallery experience easier, richer, and more accessible for every visitor.",
         ]}
       >
-        <ul className="space-y-3 text-gray-600 mt-4">
+        <ul className="space-y-4 text-gray-600 dark:text-gray-300 mt-6">
           {highlights.map((item) => (
-            <li key={item} className="flex gap-3">
-              <span className="mt-2 h-2 w-2 bg-orange-500 rounded-full"></span>
-              {item}
+            <li key={item} className="flex items-start gap-3">
+              <span className="mt-1.5 h-2.5 w-2.5 bg-orange-500 rounded-full flex-shrink-0"></span>
+              <span className="font-medium">{item}</span>
             </li>
           ))}
         </ul>
       </AboutSection>
 
-      {/* CULTURE */}
+      {/* CULTURE SECTION */}
       <AboutSection
         eyebrow="CULTURAL VALUE"
         title="Preserving Heritage Through Technology"
@@ -113,7 +115,7 @@ export default function HomePage() {
         ]}
       />
 
-      {/* CTA */}
+      {/* CTA SECTION */}
       <AboutSection
         eyebrow="EXPLORE IJISHO"
         title="Experience Art Beyond the Gallery Walls"
@@ -123,54 +125,59 @@ export default function HomePage() {
           "Explore the collection, save your favorite artworks, and connect with the gallery through one modern platform.",
         ]}
       >
-        <div className="flex flex-col sm:flex-row gap-3 mt-6 justify-center">
+        <div className="flex flex-col sm:flex-row gap-4 mt-8 justify-center lg:justify-start">
           <Link
             to="/gallery"
-            className="px-6 py-3 bg-[#0b1120] text-white font-bold rounded-xl text-center"
+            className="px-10 py-4 bg-[#0b1120] dark:bg-orange-600 text-white font-extrabold rounded-xl text-center transition-all hover:opacity-90"
           >
             Visit Gallery
           </Link>
 
           <Link
             to="/contact"
-            className="px-6 py-3 bg-orange-600 text-white font-bold rounded-xl text-center"
+            className="px-10 py-4 bg-orange-600 dark:bg-gray-800 text-white font-extrabold rounded-xl text-center transition-all hover:opacity-90"
           >
             Contact Us
           </Link>
         </div>
       </AboutSection>
 
-      {/* FEATURED WORKS - LAST SECTION WITHOUT IMAGE */}
-      <AboutSection
-        eyebrow="FEATURED COLLECTION"
-        title="Featured Works"
-        paragraphs={[
-          "A curated selection of artworks available in the gallery.",
-        ]}
-      >
-        {loading ? (
-          <p className="text-gray-500 text-center">Loading artworks...</p>
-        ) : featured.length === 0 ? (
-          <p className="text-gray-500 text-center">
-            No featured artworks available yet.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4 text-left">
-            {featured.slice(0, 4).map((artwork) => (
-              <ArtworkCard key={artwork.id} artwork={artwork} />
-            ))}
-          </div>
-        )}
+      {/* FEATURED WORKS SECTION */}
+      <div className="py-20 bg-gray-50 dark:bg-gray-900/50 transition-colors">
+        <div className="max-w-7xl mx-auto px-6">
+           <div className="text-center mb-12">
+              <span className="text-orange-600 font-black tracking-[0.2em] uppercase text-sm">Featured Collection</span>
+              <h2 className="text-4xl font-black text-[#0b1120] dark:text-white mt-2">Featured Works</h2>
+              <p className="text-gray-500 dark:text-gray-400 mt-4 max-w-2xl mx-auto">A curated selection of artworks available in the gallery.</p>
+           </div>
 
-        <div className="mt-6 flex justify-center">
-          <Link
-            to="/gallery"
-            className="px-6 py-3 bg-[#0b1120] text-white font-bold rounded-xl text-center"
-          >
-            View Full Gallery
-          </Link>
+          {loading ? (
+            <div className="flex justify-center py-10">
+               <p className="text-gray-500 dark:text-gray-400 animate-pulse font-bold">Loading masterpieces...</p>
+            </div>
+          ) : featured.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-10">
+              No featured artworks available yet.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {featured.slice(0, 4).map((artwork) => (
+                <ArtworkCard key={artwork.id} artwork={artwork} />
+              ))}
+            </div>
+          )}
+
+          <div className="mt-16 flex justify-center">
+            <Link
+              to="/gallery"
+              className="group flex items-center gap-3 px-8 py-4 bg-[#0b1120] dark:bg-white dark:text-[#0b1120] text-white font-black rounded-2xl transition-all hover:gap-5"
+            >
+              View Full Gallery
+              <span className="text-xl">→</span>
+            </Link>
+          </div>
         </div>
-      </AboutSection>
+      </div>
     </div>
   );
 }

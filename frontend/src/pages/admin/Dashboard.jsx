@@ -22,6 +22,8 @@ export default function Dashboard() {
 
   const [artworks, setArtworks] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [artworkSearch, setArtworkSearch] = useState("");
   const [visitorCount, setVisitorCount] = useState(0);
@@ -35,17 +37,28 @@ export default function Dashboard() {
       return;
     }
 
-    Promise.all([api.get("/admin/artworks"), api.get("/admin/messages")])
-      .then(([artRes, msgRes]) => {
+    Promise.all([
+      api.get("/admin/artworks"),
+      api.get("/admin/messages"),
+      api.get("/admin/reviews"),
+      api.get("/orders"),
+    ])
+      .then(([artRes, msgRes, reviewRes, ordersRes]) => {
         setArtworks(artRes.data || []);
         setMessages(msgRes.data || []);
+        setReviews(reviewRes.data || []);
+        setOrders(ordersRes.data || []);
       })
       .catch((err) => {
+        console.error("Dashboard fetch error:", err);
+
         if (err.response?.status === 401 || err.response?.status === 403) {
           localStorage.removeItem("token");
           localStorage.removeItem("userRole");
           localStorage.removeItem("userName");
           navigate("/admin/login");
+        } else {
+          toast.error("Failed to load dashboard data");
         }
       })
       .finally(() => setLoading(false));
@@ -88,6 +101,39 @@ export default function Dashboard() {
     return `${API_URL}${finalPath}`;
   };
 
+  const getOrderStatusColor = (status) => {
+    switch ((status || "").toLowerCase()) {
+      case "completed":
+      case "ready":
+        return "text-green-600 bg-green-50";
+      case "preparing":
+      case "payment_verified":
+        return "text-blue-600 bg-blue-50";
+      case "awaiting_payment":
+      case "payment_submitted":
+      case "pending":
+        return "text-orange-600 bg-orange-50";
+      case "cancelled":
+        return "text-red-600 bg-red-50";
+      default:
+        return "text-gray-600 bg-gray-100";
+    }
+  };
+
+  const getPaymentStatusColor = (status) => {
+    switch ((status || "").toLowerCase()) {
+      case "verified":
+        return "text-green-600 bg-green-50";
+      case "submitted":
+        return "text-blue-600 bg-blue-50";
+      case "rejected":
+        return "text-red-600 bg-red-50";
+      case "pending":
+      default:
+        return "text-orange-600 bg-orange-50";
+    }
+  };
+
   const stats = useMemo(() => {
     const totalArtworks = artworks.length;
     const availableArtworks = artworks.filter(
@@ -101,10 +147,41 @@ export default function Dashboard() {
     ).length;
 
     const totalMessages = messages.length;
+    const totalReviews = reviews.length;
+    const totalOrders = orders.length;
+
+    const pendingOrders = orders.filter((item) =>
+      [
+        "pending",
+        "awaiting_payment",
+        "payment_submitted",
+        "payment_verified",
+        "preparing",
+      ].includes(item.order_status)
+    ).length;
+
+    const completedOrders = orders.filter(
+      (item) => item.order_status === "completed" || item.order_status === "ready"
+    ).length;
+
+    const verifiedPayments = orders.filter(
+      (item) => item.payment_status === "verified"
+    ).length;
+
+    const averageRating =
+      totalReviews > 0
+        ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) /
+          totalReviews
+        : 0;
 
     const totalValue = artworks.reduce((sum, item) => {
       const price = Number(item.price) || 0;
       return sum + price;
+    }, 0);
+
+    const totalSales = orders.reduce((sum, order) => {
+      const amount = Number(order.total_price) || 0;
+      return sum + amount;
     }, 0);
 
     return {
@@ -113,9 +190,16 @@ export default function Dashboard() {
       soldArtworks,
       heritageItems,
       totalMessages,
+      totalReviews,
+      averageRating,
       totalValue,
+      totalOrders,
+      pendingOrders,
+      completedOrders,
+      verifiedPayments,
+      totalSales,
     };
-  }, [artworks, messages]);
+  }, [artworks, messages, reviews, orders]);
 
   const filteredArtworks = useMemo(() => {
     const term = artworkSearch.trim().toLowerCase();
@@ -149,6 +233,12 @@ export default function Dashboard() {
       .slice(0, 5);
   }, [messages]);
 
+  const recentOrders = useMemo(() => {
+    return [...orders]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 6);
+  }, [orders]);
+
   const categoryData = useMemo(() => {
     const counts = artworks.reduce((acc, item) => {
       const key = item.category || "Other";
@@ -175,13 +265,42 @@ export default function Dashboard() {
     }));
   }, [artworks]);
 
-  const pieColors = ["#16a34a", "#ef4444", "#f59e0b", "#3b82f6"];
+  const ratingDistribution = useMemo(() => {
+    const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+    reviews.forEach((review) => {
+      const rating = Number(review.rating);
+      if (counts[rating] !== undefined) {
+        counts[rating]++;
+      }
+    });
+
+    return Object.keys(counts).map((key) => ({
+      name: `${key} Stars`,
+      value: counts[key],
+    }));
+  }, [reviews]);
+
+  const orderStatusData = useMemo(() => {
+    const counts = orders.reduce((acc, item) => {
+      const key = item.order_status || "unknown";
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.keys(counts).map((key) => ({
+      name: key.replaceAll("_", " "),
+      value: counts[key],
+    }));
+  }, [orders]);
+
+  const pieColors = ["#16a34a", "#ef4444", "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899"];
 
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-10 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 animate-pulse">
-          {[...Array(4)].map((_, index) => (
+          {[...Array(8)].map((_, index) => (
             <div
               key={index}
               className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6"
@@ -209,7 +328,8 @@ export default function Dashboard() {
           </h1>
 
           <p className="mt-3 text-gray-500 max-w-2xl">
-            Monitor artworks, messages, availability, collection value, and visitors from one place.
+            Monitor artworks, orders, messages, reviews, collection value, and
+            activity from one place.
           </p>
         </div>
 
@@ -222,6 +342,13 @@ export default function Dashboard() {
           </Link>
 
           <Link
+            to="/admin/orders"
+            className="px-5 py-3 rounded-2xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-orange-500 hover:text-orange-600 transition-all"
+          >
+            Manage Orders
+          </Link>
+
+          <Link
             to="/gallery"
             className="px-5 py-3 rounded-2xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-orange-500 hover:text-orange-600 transition-all"
           >
@@ -230,7 +357,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-10">
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-bold text-gray-500">Total Artworks</p>
@@ -293,18 +420,106 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold text-gray-500">Total Orders</p>
+            <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-black">
+              {stats.totalOrders}
+            </span>
+          </div>
+          <h2 className="text-4xl font-black text-blue-600">
+            {stats.totalOrders}
+          </h2>
+          <p className="text-sm text-gray-400 mt-2">
+            Orders placed in the system
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold text-gray-500">Pending Orders</p>
+            <span className="px-3 py-1 rounded-full bg-orange-50 text-orange-600 text-xs font-black">
+              {stats.pendingOrders}
+            </span>
+          </div>
+          <h2 className="text-4xl font-black text-orange-600">
+            {stats.pendingOrders}
+          </h2>
+          <p className="text-sm text-gray-400 mt-2">
+            Orders still in progress
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold text-gray-500">Verified Payments</p>
+            <span className="px-3 py-1 rounded-full bg-green-50 text-green-600 text-xs font-black">
+              {stats.verifiedPayments}
+            </span>
+          </div>
+          <h2 className="text-4xl font-black text-green-600">
+            {stats.verifiedPayments}
+          </h2>
+          <p className="text-sm text-gray-400 mt-2">
+            Payments already approved
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold text-gray-500">Total Sales</p>
+            <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-600 text-xs font-black">
+              RWF
+            </span>
+          </div>
+          <h2 className="text-4xl font-black text-purple-600">
+            {stats.totalSales.toLocaleString()}
+          </h2>
+          <p className="text-sm text-gray-400 mt-2">
+            Sum of all order totals
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-bold text-gray-500">Messages</p>
             <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-black">
               {stats.totalMessages}
             </span>
           </div>
-
           <h2 className="text-4xl font-black text-blue-600">
             {stats.totalMessages}
           </h2>
-
           <p className="text-sm text-gray-400 mt-2">
             Contact messages received
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold text-gray-500">Reviews</p>
+            <span className="px-3 py-1 rounded-full bg-pink-50 text-pink-600 text-xs font-black">
+              {stats.totalReviews}
+            </span>
+          </div>
+          <h2 className="text-4xl font-black text-pink-600">
+            {stats.totalReviews}
+          </h2>
+          <p className="text-sm text-gray-400 mt-2">
+            Visitor reviews received
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold text-gray-500">Average Rating</p>
+            <span className="px-3 py-1 rounded-full bg-yellow-50 text-yellow-600 text-xs font-black">
+              ⭐
+            </span>
+          </div>
+          <h2 className="text-4xl font-black text-yellow-500">
+            {stats.averageRating.toFixed(1)}
+          </h2>
+          <p className="text-sm text-gray-400 mt-2">
+            Based on visitor reviews
           </p>
         </div>
 
@@ -315,11 +530,9 @@ export default function Dashboard() {
               {visitorCount}
             </span>
           </div>
-
           <h2 className="text-4xl font-black text-purple-600">
             {visitorCount}
           </h2>
-
           <p className="text-sm text-gray-400 mt-2">
             Visitors counted from browser storage
           </p>
@@ -348,7 +561,7 @@ export default function Dashboard() {
                         : 0
                     }%`,
                   }}
-                ></div>
+                />
               </div>
             </div>
 
@@ -367,7 +580,7 @@ export default function Dashboard() {
                         : 0
                     }%`,
                   }}
-                ></div>
+                />
               </div>
             </div>
 
@@ -386,7 +599,7 @@ export default function Dashboard() {
                         : 0
                     }%`,
                   }}
-                ></div>
+                />
               </div>
             </div>
           </div>
@@ -402,19 +615,26 @@ export default function Dashboard() {
               to="/admin/artworks/new"
               className="rounded-2xl border border-gray-200 p-5 hover:border-orange-500 hover:bg-orange-50 transition-all"
             >
-              <h4 className="font-black text-[#0b1120] mb-2">Add New Artwork</h4>
+              <h4 className="font-black text-[#0b1120] mb-2">
+                Add New Artwork
+              </h4>
               <p className="text-sm text-gray-500">
                 Upload a new artwork to the collection
               </p>
             </Link>
 
             <Link
-              to="/gallery"
+              to="/admin/orders"
               className="rounded-2xl border border-gray-200 p-5 hover:border-blue-500 hover:bg-blue-50 transition-all"
             >
-              <h4 className="font-black text-[#0b1120] mb-2">Open Gallery</h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-black text-[#0b1120]">Manage Orders</h4>
+                <span className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-600 text-xs font-black">
+                  {stats.totalOrders}
+                </span>
+              </div>
               <p className="text-sm text-gray-500">
-                View the public gallery experience
+                Review orders, payment status, and progress
               </p>
             </Link>
 
@@ -428,16 +648,29 @@ export default function Dashboard() {
                   {stats.totalMessages}
                 </span>
               </div>
-
               <p className="text-sm text-gray-500">
                 View and delete visitor contact messages
+              </p>
+            </Link>
+
+            <Link
+              to="/admin/reviews"
+              className="rounded-2xl border border-gray-200 p-5 hover:border-pink-500 hover:bg-pink-50 transition-all"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-black text-[#0b1120]">Manage Reviews</h4>
+                <span className="px-2.5 py-1 rounded-full bg-pink-100 text-pink-600 text-xs font-black">
+                  {stats.totalReviews}
+                </span>
+              </div>
+              <p className="text-sm text-gray-500">
+                View and manage visitor reviews
               </p>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Artwork Search */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 mb-10">
         <label className="block text-sm font-bold text-gray-700 mb-2">
           Search Artworks
@@ -451,14 +684,13 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
           <h3 className="text-xl font-black text-[#0b1120] mb-4">
             Artworks by Category
           </h3>
 
-          <div className="h-80">
+          <div className="h-80 min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={categoryData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -476,7 +708,7 @@ export default function Dashboard() {
             Artworks by Status
           </h3>
 
-          <div className="h-80">
+          <div className="h-80 min-h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -502,7 +734,105 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <h3 className="text-xl font-black text-[#0b1120] mb-4">
+            Rating Distribution
+          </h3>
+
+          <div className="h-80 min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={ratingDistribution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="value" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {reviews.length === 0 && (
+            <p className="text-gray-400 text-sm mt-4">No reviews yet</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <h3 className="text-xl font-black text-[#0b1120] mb-4">
+            Orders by Status
+          </h3>
+
+          <div className="h-80 min-h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={orderStatusData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="value" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {orders.length === 0 && (
+            <p className="text-gray-400 text-sm mt-4">No orders yet</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <h3 className="text-xl font-black text-[#0b1120] mb-4">
+            Collection Value
+          </h3>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-gray-500 mb-2">
+                Total Estimated Value
+              </p>
+              <h2 className="text-4xl font-black text-blue-600">
+                ${stats.totalValue.toLocaleString()}
+              </h2>
+            </div>
+
+            <div className="px-4 py-2 rounded-2xl bg-blue-50 text-blue-600 text-sm font-bold">
+              Inventory
+            </div>
+          </div>
+
+          <p className="text-sm text-gray-400 mt-4">
+            Based on artwork prices currently stored in the system.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <h3 className="text-xl font-black text-[#0b1120] mb-4">
+            Order Revenue
+          </h3>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-gray-500 mb-2">
+                Total Order Revenue
+              </p>
+              <h2 className="text-4xl font-black text-green-600">
+                RWF {stats.totalSales.toLocaleString()}
+              </h2>
+            </div>
+
+            <div className="px-4 py-2 rounded-2xl bg-green-50 text-green-600 text-sm font-bold">
+              Orders
+            </div>
+          </div>
+
+          <p className="text-sm text-gray-400 mt-4">
+            Based on order totals stored in the system.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-xl font-black text-[#0b1120]">
@@ -537,11 +867,9 @@ export default function Dashboard() {
                       <h4 className="font-black text-[#0b1120] truncate">
                         {item.title}
                       </h4>
-
                       <p className="text-sm text-gray-500">
                         {item.category} • {item.status}
                       </p>
-
                       <p className="text-xs text-gray-400 mt-1">
                         Added: {formatDate(item.created_at)}
                       </p>
@@ -621,6 +949,77 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-xl font-black text-[#0b1120]">Recent Orders</h3>
+          <Link
+            to="/admin/orders"
+            className="text-sm font-bold text-blue-600 hover:underline"
+          >
+            View All Orders
+          </Link>
+        </div>
+
+        {recentOrders.length === 0 ? (
+          <p className="text-gray-500">No orders found.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px] text-left">
+              <thead>
+                <tr className="text-sm text-gray-500 border-b border-gray-100">
+                  <th className="py-3 pr-4 font-bold">Tracking Code</th>
+                  <th className="py-3 pr-4 font-bold">Customer</th>
+                  <th className="py-3 pr-4 font-bold">Phone</th>
+                  <th className="py-3 pr-4 font-bold">Total</th>
+                  <th className="py-3 pr-4 font-bold">Payment</th>
+                  <th className="py-3 pr-4 font-bold">Order Status</th>
+                  <th className="py-3 pr-4 font-bold">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.map((order) => (
+                  <tr key={order.id} className="border-b border-gray-50">
+                    <td className="py-4 pr-4 font-black text-[#0b1120]">
+                      {order.tracking_code}
+                    </td>
+                    <td className="py-4 pr-4">
+                      {order.customer_name || "Guest"}
+                    </td>
+                    <td className="py-4 pr-4">
+                      {order.customer_phone || "-"}
+                    </td>
+                    <td className="py-4 pr-4 font-bold text-green-600">
+                      RWF {Number(order.total_price || 0).toLocaleString()}
+                    </td>
+                    <td className="py-4 pr-4">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-black capitalize ${getPaymentStatusColor(
+                          order.payment_status
+                        )}`}
+                      >
+                        {(order.payment_status || "pending").replaceAll("_", " ")}
+                      </span>
+                    </td>
+                    <td className="py-4 pr-4">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-black capitalize ${getOrderStatusColor(
+                          order.order_status
+                        )}`}
+                      >
+                        {(order.order_status || "pending").replaceAll("_", " ")}
+                      </span>
+                    </td>
+                    <td className="py-4 pr-4 text-gray-500">
+                      {formatDate(order.created_at)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

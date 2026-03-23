@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { toast } from "react-toastify";
-import { FaWhatsapp, FaInstagram } from "react-icons/fa";
+import { FaWhatsapp, FaStar, FaRegStar } from "react-icons/fa";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function ArtworkDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [artwork, setArtwork] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,25 +16,63 @@ export default function ArtworkDetail() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [inCart, setInCart] = useState(false);
 
-  useEffect(() => {
-    setLoading(true);
+  // حالات نظام التقييم
+  const [reviews, setReviews] = useState([]);
+  const [userRating, setUserRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    api
-      .get(`/gallery/${id}`)
-      .then((res) => setArtwork(res.data))
-      .catch((err) => console.error("Failed to fetch artwork:", err))
-      .finally(() => setLoading(false));
+  useEffect(() => {
+    fetchData();
+  }, [id]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const artworkRes = await api.get(`/gallery/${id}`);
+      setArtwork(artworkRes.data);
+
+      // لو عندك API للمراجعات يمكنك تفعيله لاحقًا
+      // const reviewsRes = await api.get(`/gallery/${id}/reviews`);
+      // setReviews(reviewsRes.data || []);
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+      toast.error("Failed to load artwork");
+    } finally {
+      setLoading(false);
+    }
 
     const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
     setIsFavorite(favorites.includes(id));
 
     const cart = JSON.parse(localStorage.getItem("cart")) || [];
     setInCart(cart.includes(id));
-  }, [id]);
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      await api.post(`/gallery/${id}/reviews`, {
+        rating: userRating,
+        comment: comment,
+        customer_name: "Guest User",
+      });
+
+      toast.success("Review submitted successfully!");
+      setComment("");
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to submit review");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const toggleFavorite = () => {
     const favorites = JSON.parse(localStorage.getItem("favorites")) || [];
-
     let updated;
 
     if (favorites.includes(id)) {
@@ -51,7 +90,6 @@ export default function ArtworkDetail() {
 
   const toggleCart = () => {
     const cart = JSON.parse(localStorage.getItem("cart")) || [];
-
     let updated;
 
     if (cart.includes(id)) {
@@ -68,18 +106,41 @@ export default function ArtworkDetail() {
     window.dispatchEvent(new Event("cartUpdated"));
   };
 
+  const handleOrderNow = () => {
+    const cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+    if (!cart.includes(id)) {
+      const updatedCart = [...cart, id];
+      localStorage.setItem("cart", JSON.stringify(updatedCart));
+      setInCart(true);
+      window.dispatchEvent(new Event("cartUpdated"));
+      toast.success("Added to cart");
+    }
+
+    navigate("/checkout");
+  };
+
   const shareArtwork = async () => {
     const shareData = {
-      title: artwork.title,
+      title: artwork?.title,
       text: "Check out this artwork",
       url: window.location.href,
     };
 
     try {
-      await navigator.share(shareData);
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copied to clipboard");
+      }
     } catch {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success("Link copied to clipboard");
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copied to clipboard");
+      } catch {
+        toast.info("Unable to share this item");
+      }
     }
   };
 
@@ -89,12 +150,9 @@ export default function ArtworkDetail() {
     return `${API_URL}${path.startsWith("/") ? path : `/${path}`}`;
   };
 
-  const whatsappMessage = encodeURIComponent(
-    `Hello, I am interested in this artwork: ${artwork?.title || "Artwork"}`
-  );
-
-  const whatsappUrl = `https://wa.me/250789781166?text=${whatsappMessage}`;
-  const instagramUrl = "https://www.instagram.com/ijisho_artspace/";
+  const whatsappUrl = `https://wa.me/250789781166?text=${encodeURIComponent(
+    `Hello, I'm interested in: ${artwork?.title}`
+  )}`;
 
   if (loading) {
     return (
@@ -110,29 +168,26 @@ export default function ArtworkDetail() {
   if (!artwork) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-3xl font-black text-[#0b1120] dark:text-white mb-3">
+        <h2 className="text-3xl font-black mb-3 text-[#0b1120] dark:text-white">
           Artwork not found
         </h2>
-        <p className="text-gray-500 dark:text-gray-300">
-          The artwork you are looking for does not exist.
-        </p>
       </div>
     );
   }
 
   const imageUrl = getFullImageUrl(artwork.image_url);
+  const avgRating = Number(artwork.average_rating || 0);
 
   return (
     <>
-      <div className="max-w-6xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-          {/* Image */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-4">
             <button onClick={() => setFullscreen(true)} className="w-full group">
               <img
                 src={imageUrl}
                 alt={artwork.title}
-                className="w-full h-[500px] object-cover rounded-2xl transition-transform duration-300 group-hover:scale-[1.02]"
+                className="w-full h-[500px] object-cover rounded-2xl"
               />
             </button>
 
@@ -144,11 +199,19 @@ export default function ArtworkDetail() {
             </button>
           </div>
 
-          {/* Details */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm p-8">
-            <span className="inline-block px-4 py-1 rounded-full bg-orange-50 text-orange-600 text-sm font-bold mb-4">
-              Artwork Details
-            </span>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="px-4 py-1 rounded-full bg-orange-50 text-orange-600 text-sm font-bold">
+                Artwork Details
+              </span>
+
+              <div className="flex items-center text-orange-400">
+                <FaStar className="mr-1" />
+                <span className="font-bold text-gray-900 dark:text-white">
+                  {avgRating.toFixed(1)}
+                </span>
+              </div>
+            </div>
 
             <h1 className="text-4xl font-black text-[#0b1120] dark:text-white mb-4">
               {artwork.title}
@@ -174,24 +237,16 @@ export default function ArtworkDetail() {
               )}
 
               {artwork.price && (
-                <p>
-                  <b>Price:</b> ${Number(artwork.price).toLocaleString()}
-                </p>
-              )}
-
-              {artwork.created_at && (
-                <p>
-                  <b>Added:</b>{" "}
-                  {new Date(artwork.created_at).toLocaleDateString()}
+                <p className="text-2xl text-blue-600 font-black">
+                  RWF {Number(artwork.price).toLocaleString()}
                 </p>
               )}
             </div>
 
-            {/* Main Buttons */}
-            <div className="flex flex-wrap gap-3 mb-4">
+            <div className="flex flex-wrap gap-3 mb-6">
               <button
                 onClick={toggleFavorite}
-                className={`px-5 py-3 rounded-2xl font-bold transition-all ${
+                className={`px-5 py-3 rounded-2xl font-bold ${
                   isFavorite
                     ? "bg-red-500 text-white"
                     : "bg-gray-100 dark:bg-gray-800 dark:text-white"
@@ -202,7 +257,7 @@ export default function ArtworkDetail() {
 
               <button
                 onClick={toggleCart}
-                className={`px-5 py-3 rounded-2xl font-bold transition-all ${
+                className={`px-5 py-3 rounded-2xl font-bold ${
                   inCart
                     ? "bg-green-600 text-white"
                     : "bg-gray-100 dark:bg-gray-800 dark:text-white"
@@ -213,43 +268,128 @@ export default function ArtworkDetail() {
 
               <button
                 onClick={shareArtwork}
-                className="px-5 py-3 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all"
+                className="px-5 py-3 rounded-2xl bg-blue-600 text-white font-bold"
               >
                 Share
               </button>
             </div>
 
-            {/* Social Contact Buttons */}
-            <div className="flex flex-wrap gap-3 mb-6">
+            <div className="flex flex-wrap gap-3 mb-8">
               <a
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-green-500 text-white font-bold hover:bg-green-600 transition-all"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-green-500 text-white font-bold"
               >
-                <FaWhatsapp className="text-xl" />
-                WhatsApp
+                <FaWhatsapp /> WhatsApp
               </a>
 
-              <a
-                href={instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-pink-500 text-white font-bold hover:bg-pink-600 transition-all"
+              <button
+                onClick={handleOrderNow}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-orange-600 text-white font-black hover:bg-orange-700 transition-all"
               >
-                <FaInstagram className="text-xl" />
-                Instagram
-              </a>
+                🛒 Order Now
+              </button>
             </div>
 
             <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
               <h2 className="text-xl font-black text-[#0b1120] dark:text-white mb-3">
                 Description
               </h2>
-
               <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                {artwork.description || "No description available for this artwork."}
+                {artwork.description || "No description available."}
               </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-16 grid grid-cols-1 lg:grid-cols-3 gap-12 border-t border-gray-100 dark:border-gray-800 pt-12">
+          <div className="lg:col-span-1">
+            <h3 className="text-2xl font-black text-[#0b1120] dark:text-white mb-6">
+              Leave a Review
+            </h3>
+
+            <form
+              onSubmit={handleReviewSubmit}
+              className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-800"
+            >
+              <div className="mb-4">
+                <p className="text-sm font-bold mb-2 dark:text-gray-300">
+                  Your Rating
+                </p>
+
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setUserRating(s)}
+                      className="text-2xl transition-transform hover:scale-110"
+                    >
+                      {s <= userRating ? (
+                        <FaStar className="text-orange-500" />
+                      ) : (
+                        <FaRegStar className="text-gray-300" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <textarea
+                  className="w-full p-4 rounded-2xl border border-gray-200 dark:border-gray-800 dark:bg-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                  placeholder="Share your thoughts about this art..."
+                  rows="4"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3 bg-[#0b1120] dark:bg-orange-600 text-white font-bold rounded-xl disabled:opacity-50"
+              >
+                {isSubmitting ? "Submitting..." : "Post Review"}
+              </button>
+            </form>
+          </div>
+
+          <div className="lg:col-span-2">
+            <h3 className="text-2xl font-black text-[#0b1120] dark:text-white mb-6">
+              Reviews ({reviews.length})
+            </h3>
+
+            <div className="space-y-6">
+              {reviews.length > 0 ? (
+                reviews.map((rev, index) => (
+                  <div
+                    key={index}
+                    className="bg-white dark:bg-gray-900 p-6 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex text-orange-500 text-xs">
+                        {"★".repeat(rev.rating)}
+                        {"☆".repeat(5 - rev.rating)}
+                      </div>
+
+                      <span className="font-black text-sm dark:text-white">
+                        {rev.customer_name || "Guest"}
+                      </span>
+                    </div>
+
+                    <p className="text-gray-600 dark:text-gray-400 text-sm italic">
+                      "{rev.comment}"
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">
+                  No reviews yet. Be the first to review!
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -259,7 +399,7 @@ export default function ArtworkDetail() {
         <div className="fixed inset-0 z-[999] bg-black/95 flex items-center justify-center p-4">
           <button
             onClick={() => setFullscreen(false)}
-            className="absolute top-6 right-6 px-4 py-2 rounded-xl bg-white text-black font-bold hover:bg-gray-200 transition-all"
+            className="absolute top-6 right-6 px-4 py-2 bg-white rounded-xl font-bold"
           >
             Close
           </button>
@@ -274,3 +414,4 @@ export default function ArtworkDetail() {
     </>
   );
 }
+

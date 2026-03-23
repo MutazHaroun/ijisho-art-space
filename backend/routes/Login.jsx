@@ -40,7 +40,7 @@ export default function Login() {
       if (data.role === "admin") {
         navigate("/admin/dashboard");
       } else {
-        navigate("/my-orders");
+        navigate("/");
       }
     } catch (err) {
       localStorage.removeItem("token");
@@ -132,4 +132,3 @@ export default function Login() {
     </div>
   );
 }
-

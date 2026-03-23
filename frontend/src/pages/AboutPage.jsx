@@ -18,7 +18,9 @@ export default function AboutPage() {
   ];
 
   return (
-    <div className="bg-gray-50">
+    // التعديل 1: تغيير الخلفية لتتحول للون الداكن مع انتقال ناعم
+    <div className="bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
+      
       {/* HERO */}
       <AboutSection
         eyebrow="ABOUT IJISHO ART SPACE"
@@ -31,9 +33,10 @@ export default function AboutPage() {
       >
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
           {stats.map((s) => (
-            <div key={s.label} className="bg-gray-100 p-4 rounded-xl">
-              <p className="text-xs text-gray-500 font-bold">{s.label}</p>
-              <p className="font-black text-[#0b1120]">{s.value}</p>
+            // التعديل 2: تغيير خلفية وألوان كروت الإحصائيات
+            <div key={s.label} className="bg-gray-100 dark:bg-gray-900 p-4 rounded-xl border border-transparent dark:border-gray-800 transition-colors">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-bold">{s.label}</p>
+              <p className="font-black text-[#0b1120] dark:text-white">{s.value}</p>
             </div>
           ))}
         </div>
@@ -120,10 +123,11 @@ export default function AboutPage() {
           "The system includes several features that improve presentation, accessibility, and management of artworks.",
         ]}
       >
-        <ul className="space-y-3 text-gray-600 mt-4">
+        {/* التعديل 3: تغيير لون نصوص القائمة */}
+        <ul className="space-y-3 text-gray-600 dark:text-gray-300 mt-4">
           {features.map((f) => (
             <li key={f} className="flex gap-3">
-              <span className="mt-2 h-2 w-2 bg-orange-500 rounded-full"></span>
+              <span className="mt-2 h-2 w-2 bg-orange-500 rounded-full flex-shrink-0"></span>
               {f}
             </li>
           ))}
@@ -143,14 +147,15 @@ export default function AboutPage() {
         <div className="flex flex-col sm:flex-row gap-3 mt-6">
           <a
             href="/gallery"
-            className="px-6 py-3 bg-[#0b1120] text-white font-bold rounded-xl"
+            // التعديل 4: أزرار متوافقة مع الوضع الداكن
+            className="px-6 py-3 bg-[#0b1120] dark:bg-orange-600 text-white font-bold rounded-xl text-center transition-all"
           >
             Explore Gallery
           </a>
 
           <a
             href="/contact"
-            className="px-6 py-3 bg-orange-600 text-white font-bold rounded-xl"
+            className="px-6 py-3 bg-orange-600 dark:bg-gray-800 text-white font-bold rounded-xl text-center transition-all"
           >
             Contact Us
           </a>
@@ -159,3 +164,4 @@ export default function AboutPage() {
     </div>
   );
 }
+
